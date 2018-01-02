@@ -27,7 +27,7 @@ class ControlGroup(QtGui.QWidget):
 
         mash_temp_box = QtGui.QGroupBox('Mash Temp')
         mash_temp_box.setMinimumHeight(30)
-        self.mash_temp_disp = QtGui.QLineEdit('65')
+        self.mash_temp_disp = QtGui.QLineEdit('0')
         self.mash_temp_disp.setMinimumHeight(20)
         self.mash_temp_disp.setAlignment(QtCore.Qt.AlignCenter)
         mtb_layout = QtGui.QVBoxLayout()
@@ -36,7 +36,7 @@ class ControlGroup(QtGui.QWidget):
 
         mash_eff_box = QtGui.QGroupBox('Mash Eff')
         mash_eff_box.setMinimumHeight(30)
-        self.mash_eff_disp = QtGui.QLineEdit('78')
+        self.mash_eff_disp = QtGui.QLineEdit('0')
         self.mash_eff_disp.setMinimumHeight(20)
         self.mash_eff_disp.setAlignment(QtCore.Qt.AlignCenter)
         mef_layout = QtGui.QVBoxLayout()
@@ -45,7 +45,7 @@ class ControlGroup(QtGui.QWidget):
 
         vol_box = QtGui.QGroupBox('Volume')
         vol_box.setMinimumHeight(30)
-        self.vol_disp = QtGui.QLineEdit('60')
+        self.vol_disp = QtGui.QLineEdit('0')
         self.vol_disp.setMinimumHeight(20)
         self.vol_disp.setAlignment(QtCore.Qt.AlignCenter)
         vol_layout = QtGui.QVBoxLayout()

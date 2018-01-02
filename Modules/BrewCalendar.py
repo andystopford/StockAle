@@ -11,18 +11,18 @@ class BrewCalendar(QtGui.QCalendarWidget):
                                   color(QtGui.QPalette.Highlight))
         self.color.setRgb(0, 0, 255)
         self.color.setAlpha(64)
-        self.dateList = []
+        self.date_list = []
         self.setGridVisible(True)
 
     def paintCell(self, painter, rect, date):
         """ Colour in cells."""
         QtGui.QCalendarWidget.paintCell(self, painter, rect, date)
-        if date in self.dateList:
+        if date in self.date_list:
             painter.fillRect(rect, self.color)
 
-    def dates(self, dateList):
+    def dates(self, date_list):
         """ Set list of dates to colour."""
-        self.dateList = dateList
+        self.date_list = date_list
 
 
 

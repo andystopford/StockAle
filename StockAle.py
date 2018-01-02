@@ -35,9 +35,9 @@ class MainWindow(QtGui.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.default_style_sheet = self.styleSheet()
-        self.setWindowTitle("StockAle v.3")
+        self.setWindowTitle("StockAle v.3.1")
         self.setWindowIcon(QtGui.QIcon('./pint_icon.png'))
-        self.brew_path = './Brews/'
+        # self.brew_path = './Brews/'
         self.grain_list = []
         self.sel_grain = 0
         self.used_grain_list = []
@@ -47,12 +47,6 @@ class MainWindow(QtGui.QMainWindow):
         self.hopRecipe_list = []
         self.grain_select = 0
         self.hop_select = 0
-        self.maxDisplay = 0
-        self.mash_temp = str(0)
-        self.mash_eff = str(0)
-        self.length = str(0)
-        self.mash_deg = 0
-        self.total_col = 0
         self.total_ebu = 0
         self.pkt_use = 0
         self.process_notes = ""
@@ -65,7 +59,6 @@ class MainWindow(QtGui.QMainWindow):
                        'Jun': 6, 'Jul': 7,
                        'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12}
         self.palette = QtGui.QPalette()
-        self.styleList = []
         QtGui.QApplication.setStyle(Qt.QStyleFactory.create('cleanlooks'))
 
         # Connect signals to slots
@@ -110,37 +103,43 @@ class MainWindow(QtGui.QMainWindow):
     # Initialise some stuff
     def init_params(self):
         self.ui.rcg.button_commit.setEnabled(False)
-        self.highlight_date()
         self.read_prefs()
+        self.highlight_date()
 
     def read_prefs(self):
+        style_list = []
         try:
-            path = './Data/prefs.xml'
+            path = './prefs.xml'
             with open(path, "r") as fo:
-                tree = ET.ElementTree(file=path)
+                tree = ET.ElementTree(file=fo)
                 root = tree.getroot()
                 for elem in root.iter():
                     if elem.tag == 'Days':
-                        self.maxDisplay = (int(elem.text))
+                        max_display = (int(elem.text))
                     if elem.tag == 'Length':
-                        self.length = (str(elem.text))
+                        length = (str(elem.text))
                     if elem.tag == 'Temp':
-                        self.mash_temp = (str(elem.text))
+                        mash_temp = (str(elem.text))
                     if elem.tag == 'Eff':
-                        self.mash_eff = (str(elem.text))
+                        mash_eff = (str(elem.text))
                     if elem.tag == 'Styles':
                         for style in elem:
                             style = style.tag.replace('_', ' ')
-                            self.styleList.append(style)
+                            style_list.append(style)
                     if elem.tag == 'Theme':
                         if elem.text == 'dark':
                             theme = True
                         else:
                             theme = False
-            self.set_prefs(self.maxDisplay, self.length, self.mash_temp,
-                           self.mash_eff, self.styleList, theme)
+            self.set_prefs(max_display, length, mash_temp,
+                           mash_eff, style_list, theme)
         except:
-            self.error_message("No Preference File Found")
+            with open('prefs.xml', 'wb') as fo:
+                root = ET.Element('Root')
+                tree = ET.ElementTree(root)
+                tree.write(fo)
+                self.error_message("No Preferences Set")
+                self.prefs()
 
     def set_prefs(self, days, length, temp, eff, styles, theme):
         self.ui.rcg.vol_disp.setText(length)
@@ -271,26 +270,26 @@ class MainWindow(QtGui.QMainWindow):
 
     def grain_info_calc(self):
         """ Calculate wort OG and EBC."""
-        self.mash_deg = 0
-        self.total_col = 0
-        self.mash_eff = int(self.ui.rcg.mash_eff_disp.text())
-        for item in self.used_grain_list:
-            wgt = float(Grain.get_wgt(item))
-            extr = float(Grain.get_extr(item))
-            col = int(Grain.get_ebc(item))
-            deg = (extr * wgt *
-                   (float(self.mash_eff) / 100)) / float(self.length)
-            self.mash_deg += deg
-            col *= wgt
-            self.total_col += col
-        OG = int(self.mash_deg)
-        OG = str(OG)
-        self.total_col = int(self.total_col * 10 *
-                             (float(self.mash_eff) / 100)) / float(self.length)
-        colour = int(self.total_col)
-        colour = str(colour)
-        self.ui.rcg.ebc_disp.setText(colour)
-        self.ui.rcg.og_disp.setText(OG)
+        if len(self.used_grain_list) > 0:
+            mash_deg = 0
+            total_col = 0
+            mash_eff = int(self.ui.rcg.mash_eff_disp.text())
+            vol = float(self.ui.rcg.vol_disp.text())
+            for item in self.used_grain_list:
+                wgt = float(Grain.get_wgt(item))
+                extr = float(Grain.get_extr(item))
+                col = int(Grain.get_ebc(item))
+                deg = (extr * wgt *
+                       (float(mash_eff) / 100)) / vol
+                mash_deg += deg
+                col *= wgt
+                total_col += col
+            OG = int(mash_deg)
+            OG = str(OG)
+            total_col = int(total_col * 10 * (float(mash_eff) / 100)) / vol
+            colour = int(total_col)
+            self.ui.rcg.ebc_disp.setText(str(colour))
+            self.ui.rcg.og_disp.setText(OG)
 
     def grain_table_update(self):
         """ Fill cells in the grain stock table with instances
@@ -369,19 +368,19 @@ class MainWindow(QtGui.QMainWindow):
             pos = self.grainRecipe_list.index(item)
             name = Grain.get_name(item)
             wgt = str(Grain.get_wgt(item))
-            calcWgt = float(Grain.get_wgt(item))
-            total += calcWgt
-            perCent = int((calcWgt / total) * 100)
-            perCent = str(perCent)
+            calc_wgt = float(Grain.get_wgt(item))
+            total += calc_wgt
+            percent = int((calc_wgt / total) * 100)
+            percent = str(percent)
             name = QtGui.QTableWidgetItem(name)
             self.ui.hcg.grain_use.setItem(pos, 0, name)
             wgt = QtGui.QTableWidgetItem(wgt)
             self.ui.hcg.grain_use.setItem(pos, 1, wgt)
-            perCent = QtGui.QTableWidgetItem(perCent)
-            self.ui.hcg.grain_use.setItem(pos, 2, perCent)
-        rowCount = len(self.grainRecipe_list)  # Ensure extra rows available
+            percent = QtGui.QTableWidgetItem(percent)
+            self.ui.hcg.grain_use.setItem(pos, 2, percent)
+        row_count = len(self.grainRecipe_list)  # Ensure extra rows available
         if len(self.grainRecipe_list) > 4:
-            self.ui.hcg.grain_use.setRowCount(rowCount + 1)
+            self.ui.hcg.grain_use.setRowCount(row_count + 1)
 
     ###########################################################################
     # Hops
@@ -450,7 +449,6 @@ class MainWindow(QtGui.QMainWindow):
                 for hop in temp_used_hops:
                     if hop.get_name() == name:
                         adj_alpha = hop.get_alpha()
-                        # print(adj_alpha)
                 for item in self.hop_list:
                     if name == item.get_name():
                         stock_name = item.get_name()
@@ -474,20 +472,21 @@ class MainWindow(QtGui.QMainWindow):
 
     def hop_info_calc(self):
         """Calculates wort EBU"""
-        baseUtn = float(37)
-        curve = float(15)
-        curve *= -0.001
-        self.total_ebu = 0
-        vol = float(self.length)
-        for item in self.used_hop_list:
-            wgt = float(Hop.get_wgt(item))
-            alpha = float(Hop.get_alpha(item))
-            time = float(Hop.get_time(item))
-            boil_comp = 1 - math.e ** (curve * time)
-            ut = baseUtn * boil_comp
-            ebu = (wgt * alpha * ut) / (vol * 10)
-            self.total_ebu += int(ebu)
-        self.ui.rcg.ebu_disp.setText(str(self.total_ebu))
+        if len(self.used_hop_list) > 0:
+            base_utn = float(37)
+            curve = float(15)
+            curve *= -0.001
+            total_ebu = 0
+            vol = float(self.ui.rcg.vol_disp.text())
+            for item in self.used_hop_list:
+                wgt = float(Hop.get_wgt(item))
+                alpha = float(Hop.get_alpha(item))
+                time = float(Hop.get_time(item))
+                boil_comp = 1 - math.e ** (curve * time)
+                ut = base_utn * boil_comp
+                ebu = (wgt * alpha * ut) / (vol * 10)
+                total_ebu += int(ebu)
+            self.ui.rcg.ebu_disp.setText(str(total_ebu))
 
     def hop_stock_rclick(self):
         """ Select entry to delete from hop stock table."""
@@ -525,9 +524,10 @@ class MainWindow(QtGui.QMainWindow):
         for hop in self.used_hop_list:
             if hop.get_name() == self.ui.rcg.hop_use.item(row, 0).text():
                 curr_alpha = hop.get_alpha()
-                alpha, ok = QtGui.QInputDialog.getText\
-                    (self, "Adjust Alpha", "Enter Alpha",
-                     QtGui.QLineEdit.Normal, curr_alpha)
+                alpha, ok = QtGui.QInputDialog.getText(self, "Adjust Alpha",
+                                                       "Enter Alpha",
+                                                       QtGui.QLineEdit.Normal,
+                                                       curr_alpha)
                 if ok:
                     hop.set_alpha(alpha)
         self.hop_info_calc()
@@ -571,9 +571,9 @@ class MainWindow(QtGui.QMainWindow):
             self.ui.hcg.hop_use.setItem(pos, 1, wgt)
             time = QtGui.QTableWidgetItem(time)
             self.ui.hcg.hop_use.setItem(pos, 2, time)
-        rowCount = len(self.hopRecipe_list)  # Ensure extra rows available
+        row_count = len(self.hopRecipe_list)  # Ensure extra rows available
         if len(self.hopRecipe_list) > 4:
-            self.ui.hcg.hop_use.setRowCount(rowCount + 1)
+            self.ui.hcg.hop_use.setRowCount(row_count + 1)
 
     ###########################################################################
 
@@ -594,29 +594,29 @@ class MainWindow(QtGui.QMainWindow):
         elif reply == QtGui.QMessageBox.No:
             return True
         elif reply == QtGui.QMessageBox.Yes:
-            for item in self.used_grain_list:
-                used_name = Grain.get_name(item)
-                used_wgt = float(Grain.get_wgt(item))
-                for item in self.grain_list:
-                    grain_name = Grain.get_name(item)
+            for used_grain in self.used_grain_list:
+                used_name = Grain.get_name(used_grain)
+                used_wgt = float(Grain.get_wgt(used_grain))
+                for grain in self.grain_list:
+                    grain_name = Grain.get_name(grain)
                     if grain_name == used_name:
-                        item.wgt = float(item.wgt)
-                        item.wgt -= used_wgt
-                        if item.wgt < 0:
-                            item.wgt = 0
-                        item.wgt = str(item.wgt)
+                        grain.wgt = float(grain.wgt)
+                        grain.wgt -= used_wgt
+                        if grain.wgt < 0:
+                            grain.wgt = 0
+                        grain.wgt = str(grain.wgt)
                         self.grain_table_update()
-            for item in self.used_hop_list:
-                used_name = Hop.get_name(item)
-                used_wgt = float(Hop.get_wgt(item))
-                for item in self.hop_list:
-                    hop_name = Hop.get_name(item)
+            for used_hop in self.used_hop_list:
+                used_name = Hop.get_name(used_hop)
+                used_wgt = float(Hop.get_wgt(used_hop))
+                for hop in self.hop_list:
+                    hop_name = Hop.get_name(hop)
                     if hop_name == used_name:
-                        item.wgt = float(item.wgt)
-                        item.wgt -= used_wgt
-                        if item.wgt < 0:
-                            item.wgt = 0
-                        item.wgt = str(item.wgt)
+                        hop.wgt = float(hop.wgt)
+                        hop.wgt -= used_wgt
+                        if hop.wgt < 0:
+                            hop.wgt = 0
+                            hop.wgt = str(hop.wgt)
                         self.hop_table_update()
             self.ui.rcg.button_commit.setEnabled(False)
             self.save_data()
@@ -722,26 +722,35 @@ class MainWindow(QtGui.QMainWindow):
 
     ###########################################################################
     # Search
+    def get_brew_path(self):
+        path = IO.get_path(self)
+        if path:
+            brew_path = path + '/Brews/'
+            os.makedirs(brew_path, exist_ok=True)
+            return brew_path
+
     def highlight_date(self):
-        """ Parse list of brews in brew folder to populate File List and
+        """ Reads list of brews in brew folder to populate File List and
         Search Calendar.
         """
-        brew_list = []
-        file_list = []
-        for brewFile in os.listdir(self.brew_path):
-            if not brewFile.startswith('.'):  # filter unix hidden files
-                day = int(brewFile[0:2])
-                month = str(brewFile[2:5])
-                year = int('20' + brewFile[5:7])
-                numMonth = int(self.months[month])
-                date = QtCore.QDate(year, numMonth, day)
-                brew_list.append(date)  # list of dates for calendar
-                date_tuple = (day, numMonth, year, brewFile) # for date sorting
-                file_list.append(date_tuple)  # in file list pane
-        self.ui.calendar.dates(brew_list)  # adds dates to calendar
-        # sort by year, month, day
-        for item in sorted(file_list, key=itemgetter(2, 1, 0)):
-            self.ui.file_list.addItem(item[3])  # sorted list
+        brew_path = self.get_brew_path()
+        if brew_path:
+            brew_list = []
+            file_list = []
+            for brewFile in os.listdir(brew_path):
+                if not brewFile.startswith('.'):  # filter unix hidden files
+                    day = int(brewFile[0:2])
+                    month = str(brewFile[2:5])
+                    year = int('20' + brewFile[5:7])
+                    num_month = int(self.months[month])
+                    date = QtCore.QDate(year, num_month, day)
+                    brew_list.append(date)  # list of dates for calendar
+                    date_tuple = (day, num_month, year, brewFile) # for sorting
+                    file_list.append(date_tuple)  # in file list pane
+            self.ui.calendar.dates(brew_list)  # adds dates to calendar
+            # sort by year, month, day
+            for item in sorted(file_list, key=itemgetter(2, 1, 0)):
+                self.ui.file_list.addItem(item[3])  # sorted list
 
     def load_selecn(self):
         """ Load a saved brew."""
@@ -753,6 +762,7 @@ class MainWindow(QtGui.QMainWindow):
         """ Search by keyword and/or rating in brew files, and display
         search results.
         """
+        brew_path = self.get_brew_path()
         word_list = []
         search_word = str(self.ui.search_box.toPlainText())
         for item in search_word.split():
@@ -762,36 +772,36 @@ class MainWindow(QtGui.QMainWindow):
         rating = int(self.ui.rating_input.value())
         rating_range = self.ui.rating_plus_minus.value()
         if rating != 0:
-            for brewFile in os.listdir(self.brew_path):
-                if not brewFile.startswith('.'):  # filter unix hidden files
-                    with open(self.brew_path + brewFile) as brew:
+            for brew_file in os.listdir(brew_path):
+                if not brew_file.startswith('.'):  # filter unix hidden files
+                    with open(brew_path + brew_file) as brew:
                         tree = ET.parse(brew)
                         root = tree.getroot()
                         for elem in root.iter():
                             if elem.tag == 'Rating':
-                                if elem.text == None:
+                                if elem.text is None:
                                     elem.text = 0
-                                brewRating = int(elem.text)
-                                if rating - rating_range <= brewRating <= \
+                                brew_rating = int(elem.text)
+                                if rating - rating_range <= brew_rating <= \
                                         rating + rating_range:
-                                    rating_list.append(brewFile)
-                                    # now search only the files in rating_list
-            for brewFile in rating_list:
-                with open(self.brew_path + brewFile) as brew:
+                                    rating_list.append(brew_file)
+            # now search only the files in rating_list
+            for brew_file in rating_list:
+                with open(brew_path + brew_file) as brew:
                     for line in brew:
                         if search_word.lower() in line.lower():
-                            if brewFile not in result:
-                                result.append(brewFile)
+                            if brew_file not in result:
+                                result.append(brew_file)
                                 # condition if rating not entered
         else:
-            for brewFile in os.listdir(self.brew_path):
-                if not brewFile.startswith('.'):
-                    with open(self.brew_path + brewFile) as brew:
+            for brew_file in os.listdir(brew_path):
+                if not brew_file.startswith('.'):
+                    with open(brew_path + brew_file) as brew:
                         for line in brew:
                             for item in word_list:
                                 if item.lower() in line.lower():
-                                    if brewFile not in result:
-                                        result.append(brewFile)
+                                    if brew_file not in result:
+                                        result.append(brew_file)
         if search_word == "":
             filler = ''
         else:
@@ -810,16 +820,16 @@ class MainWindow(QtGui.QMainWindow):
 
     def load_search(self):
         """ Select brew from search results."""
-        basename = self.ui.search_results.currentItem()
-        basename = basename.text()
-        self.load_brew(basename, True)
+        base_name = self.ui.search_results.currentItem()
+        base_name = base_name.text()
+        self.load_brew(base_name, True)
 
     def clear_search(self):
         self.ui.search_results.clear()
         self.ui.search_box.clear()
 
     ###########################################################################
-    # Brew calendar select day
+    # Brew calendar
     def select_brew(self, date):
         day = date.day()
         month = date.month()

@@ -1,4 +1,5 @@
 from PyQt4 import QtCore, QtGui
+import os.path
 import xml.etree.cElementTree as ET
 
 
@@ -28,10 +29,23 @@ class PrefDialogue(QtGui.QDialog):
         self.label_theme.setText(
             "<html><head/><body><p>Use Dark Theme</p></body></html>")
         self.spinBox_days = QtGui.QSpinBox(self)
+        self.spinBox_days.setValue(90)
         self.spinBox_length = QtGui.QSpinBox(self)
+        self.spinBox_length.setValue(60)
         self.spinBox_temp = QtGui.QSpinBox(self)
+        self.spinBox_temp.setValue(66)
         self.spinBox_eff = QtGui.QSpinBox(self)
+        self.spinBox_eff.setValue(75)
         self.checkbox_theme = QtGui.QCheckBox(self)
+
+        self.button_data_path = QtGui.QPushButton(self)
+        self.button_data_path.setText("Data Path")
+        self.button_data_path.clicked.connect(self.get_data_path)
+        self.data_path_display = QtGui.QPlainTextEdit(self)
+        self.data_path_display.setFixedHeight(35)
+        default_path = './Data/'
+        self.data_path_display.setPlainText(default_path)
+
         self.styleTable = QtGui.QTableWidget(self)
         self.styleTable.setColumnCount(1)
         self.styleTable.setHorizontalHeaderItem(0, QtGui.QTableWidgetItem(
@@ -61,10 +75,12 @@ class PrefDialogue(QtGui.QDialog):
         box.addWidget(self.label_eff, 3, 1)
         box.addWidget(self.checkbox_theme, 4, 0)
         box.addWidget(self.label_theme, 4, 1)
+        box.addWidget(self.button_data_path, 5, 0)
+        box.addWidget(self.data_path_display, 5, 1)
         container.addWidget(self.styleTable)
         container.addWidget(self.button_apply)
 
-        self.path = './Data/prefs.xml'
+        self.path = './prefs.xml'
         self.styleList = []
         self.init_params()
 
@@ -78,6 +94,13 @@ class PrefDialogue(QtGui.QDialog):
                 if self.styleTable.item(row, 0) is not None:
                     rows += 1
             self.styleTable.setRowCount(rows + 1)
+
+    def get_data_path(self):
+        """" Set path for data/brew save."""
+        dialogue = QtGui.QFileDialog(self)
+        dialogue.setFileMode(QtGui.QFileDialog.AnyFile)
+        sel = dialogue.getExistingDirectory()
+        self.data_path_display.setPlainText(sel)
 
     def init_params(self):
         """ Populates the dialogue with values from prefs.xml."""
@@ -101,6 +124,9 @@ class PrefDialogue(QtGui.QDialog):
                     if elem.tag == 'Theme':
                         if elem.text == 'dark':
                             self.checkbox_theme.setChecked(True)
+                    if elem.tag == 'Path':
+                        data_path = elem.text
+                        self.data_path_display.setPlainText(data_path)
             self.styleTable_update()
         except:
             print("No Preference File Found (prefDialogue)")
@@ -157,12 +183,13 @@ class PrefDialogue(QtGui.QDialog):
         temp = str(self.spinBox_temp.text())
         eff = str(self.spinBox_eff.text())
         theme = self.checkbox_theme.checkState()
+        path = str(self.data_path_display.toPlainText())
         par = self.parent()
         par.set_prefs(days, length, temp, eff, self.styleList, theme)
-        self.save(days, length, temp, eff, theme)
+        self.save(days, length, temp, eff, theme, path)
         self.close()
 
-    def save(self, days, length, temp, eff, theme):
+    def save(self, days, length, temp, eff, theme, path):
         """Writes preferences to prefs.xml file."""
         root = ET.Element('Root')
         days_tag = ET.SubElement(root, 'Days')
@@ -171,10 +198,12 @@ class PrefDialogue(QtGui.QDialog):
         eff_tag = ET.SubElement(root, 'Eff')
         styles = ET.SubElement(root, 'Styles')
         ui_theme = ET.SubElement(root, 'Theme')
+        path_tag = ET.SubElement(root, 'Path')
         days_tag.text = str(days)
         len_tag.text = str(length)
         temp_tag.text = str(temp)
         eff_tag.text = str(eff)
+        path_tag.text = path
         if theme:
             ui_theme.text = str('dark')
         else:
@@ -187,3 +216,4 @@ class PrefDialogue(QtGui.QDialog):
         with open(self.path, "wb") as fo:
             tree = ET.ElementTree(root)
             tree.write(fo)
+

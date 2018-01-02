@@ -1,7 +1,7 @@
 import sys, os.path
+from PyQt4 import QtCore, QtGui
 import xml.etree.ElementTree as ET
 sys.path.append("./Modules")
-from PyQt4 import QtCore, QtGui
 from ingredients import*
 
 
@@ -9,7 +9,15 @@ class IO:
     def __init__(self, parent):
         """ Utility to handle all file input/output."""
         self.parent = parent
-        self.stock_data_path = './Data/'
+
+    def get_path(self):
+        with open('./prefs.xml', 'r') as fo:
+            tree = ET.ElementTree(file=fo)
+            root = tree.getroot()
+            for elem in root.iter():
+                if elem.tag == 'Path':
+                    path = elem.text + '/'
+                    return path
         
     def save_data(self):
         """ Save stock data, with backup of previous save."""
@@ -42,15 +50,16 @@ class IO:
             wgt = str(item.get_wgt())
             wgt = "_" + wgt
             wgt = ET.SubElement(name, wgt)
-        path = self.stock_data_path
-        # Remove previous backup (if present).
-        try:
+
+        path = self.get_path()
+        # Remove previous backup (if present):
+        if os.path.isfile("{0}BAK_stockData.xml".format(path)):
             os.remove("{0}BAK_stockData.xml".format(path))
-        except OSError as e:
-            print(e.errno)
-        # Backup previous file as BAK_stockData.xml and write new file
-        os.rename("{0}stockData.xml".format(path), "{0}BAK_stockData.xml".
-                  format(path))
+        # Backup previous file as BAK_stockData.xml and write new file:
+        if os.path.isfile("{0}stockData.xml".format(path)):
+            os.rename("{0}stockData.xml".format(path), "{0}BAK_stockData.xml".
+                      format(path))
+        # Write the tree:
         with open("{0}stockData.xml".format(path), "wb") as fo:
             tree = ET.ElementTree(root)
             tree.write(fo)
@@ -58,7 +67,7 @@ class IO:
 
     def load_data(self):
         try:
-            path = self.stock_data_path
+            path = self.get_path()
             with open("{0}stockData.xml".format(path), "a"):
                 tree = ET.ElementTree(file="{0}stockData.xml".format(path))
                 root = tree.getroot()
@@ -159,9 +168,10 @@ class IO:
         EBC.text = self.parent.ui.rcg.ebc_disp.text()
         OG.text = self.parent.ui.rcg.og_disp.text()
         proc_note.text = str(self.parent.textEdit.toPlainText())
-        dir = self.parent.brew_path
-        if not os.path.isdir(dir): os.makedirs(dir)
-        path = self.parent.brew_path + fname
+        path = self.get_path()
+        path = path + 'Brews/'
+        os.makedirs(path, exist_ok=True)
+        path = path + fname
         with open(path, "wb") as fo:
             self.parent.ui.recipe_box.setTitle(fname)
             tree = ET.ElementTree(root)
@@ -182,7 +192,8 @@ class IO:
             self.parent.recipe_filename = os.path.basename(fname)
         else:
             self.parent.recipe_filename = name
-        path = self.parent.brew_path + self.parent.recipe_filename
+        path = self.get_path()
+        path = path + '/Brews/' + self.parent.recipe_filename
         self.parent.ui.history_box.setTitle(self.parent.recipe_filename)
         self.parent.ui.brew_date.setText(self.parent.recipe_filename)
         with open(path, "r"):
@@ -253,4 +264,7 @@ class IO:
                 if elem.tag == 'Eff':
                     eff = str(elem.text)
                     self.parent.ui.hcg.mash_eff_disp.setText(eff)
+                if elem.tag == 'Vol':
+                    vol = str(elem.text)
+                    self.parent.ui.hcg.vol_disp.setText(vol)
         self.parent.time_ago()
