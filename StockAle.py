@@ -27,6 +27,7 @@ from SaveDialogue import SaveDialogue
 from PrefDialogue import PrefDialogue
 from ConversionWindow import*
 import qdarkstyle
+# Modified from https://github.com/ColinDuquesnoy/QDarkStyleSheet
 
 
 class MainWindow(QtGui.QMainWindow):
@@ -37,7 +38,7 @@ class MainWindow(QtGui.QMainWindow):
         self.default_style_sheet = self.styleSheet()
         self.setWindowTitle("StockAle v.3.1")
         self.setWindowIcon(QtGui.QIcon('./pint_icon.png'))
-        # self.brew_path = './Brews/'
+        self.max_display = 90
         self.grain_list = []
         self.sel_grain = 0
         self.used_grain_list = []
@@ -142,6 +143,7 @@ class MainWindow(QtGui.QMainWindow):
                 self.prefs()
 
     def set_prefs(self, days, length, temp, eff, styles, theme):
+        self.max_display = days
         self.ui.rcg.vol_disp.setText(length)
         self.ui.rcg.mash_temp_disp.setText(temp)
         self.ui.rcg.mash_eff_disp.setText(eff)
@@ -425,7 +427,7 @@ class MainWindow(QtGui.QMainWindow):
     def use_hop(self):
         """Reads entries in the hop_use table. If the weight or time
         columns are empty, it automatically enters default values: 0g
-        and 90 minutes. If an adjustment has been made to the entry's
+        and 0 minutes. If an adjustment has been made to the entry's
         alpha, this value is used for the calculation.
         """
         temp_used_hops = self.used_hop_list
@@ -442,7 +444,7 @@ class MainWindow(QtGui.QMainWindow):
                 if self.ui.rcg.hop_use.item(row, 2) is None:
                     time = QtGui.QTableWidgetItem()
                     self.ui.rcg.hop_use.setItem(row, 2, time)
-                    time.setText(str(90))
+                    time.setText(str(0))
                 name = self.ui.rcg.hop_use.item(row, 0).text()
                 wgt = float(self.ui.rcg.hop_use.item(row, 1).text())
                 time = float(self.ui.rcg.hop_use.item(row, 2).text())
@@ -705,7 +707,7 @@ class MainWindow(QtGui.QMainWindow):
         brew_date = QtCore.QDate(year, num_month, day)
         curr_date = QtCore.QDate.currentDate()
         days = brew_date.daysTo(curr_date)
-        if days < int(self.maxDisplay):
+        if days < int(self.max_display):
             if days < 0:
                 days = 0
             weeks = int(days / 7)
@@ -848,7 +850,10 @@ class MainWindow(QtGui.QMainWindow):
 
     ###########################################################################
     def closeEvent(self, event):
-        """ On closing application window, check if data save required."""
+        """ On closing application window, save notes from open recipe, check
+        if data save required."""
+        if self.recipe_filename:
+            self.save_notes()
         if self.used_grain_list != [] and self.brew_dirty:
             reply = QtGui.QMessageBox.question(self, "UnSaved Brew",
                                                "Save Brew?",

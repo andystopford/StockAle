@@ -102,7 +102,8 @@ class IO:
         style = str(self.parent.ui.box_style.currentText())
         taste = self.parent.ui.tasting_notes.toPlainText()
         rating = str(self.parent.ui.rating.value())
-        path = self.parent.brew_path + self.parent.recipe_filename
+        brew_path = self.get_path() + 'Brews/'
+        path = brew_path + self.parent.recipe_filename
         tree = ET.parse(path)
         root = tree.getroot()
         for elem in root.iter('Process'):
