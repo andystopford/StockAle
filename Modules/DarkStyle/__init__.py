@@ -23,43 +23,29 @@
 # THE SOFTWARE.
 #
 """
-Initialise the QDarkStyleSheet module when used with python.
-
+Initialise the DarkStyleSheet module when used with python.
 This modules provides a function to transparently load the stylesheets
 with the correct rc file.
 """
 import logging
 import platform
 
-
 __version__ = "2.3.0"
 
 
 def _logger():
-    return logging.getLogger('qdarkstyle')
+    return logging.getLogger('DarkStyle')
 
 
-def load_stylesheet(pyside=True):
+def load_stylesheet():
     """
     Loads the stylesheet. Takes care of importing the rc module.
-
-    :param pyside: True to load the pyside rc file, False to load the PyQt rc file
-
     :return the stylesheet string
     """
-    # Smart import of the rc file
-    if pyside:
-        import qdarkstyle.pyside_style_rc
-    else:
-        import qdarkstyle.pyqt_style_rc
-
+    import DarkStyle.pyqt_style_rc
     # Load the stylesheet content from resources
-    if not pyside:
-        from PyQt4.QtCore import QFile, QTextStream
-    else:
-        from PySide.QtCore import QFile, QTextStream
-
-    f = QFile(":qdarkstyle/style.qss")
+    from PyQt4.QtCore import QFile, QTextStream
+    f = QFile(":DarkStyle/style.qss")
     if not f.exists():
         _logger().error("Unable to load stylesheet, file not found in "
                         "resources")
@@ -84,18 +70,13 @@ def load_stylesheet(pyside=True):
 def load_stylesheet_pyqt5():
     """
     Loads the stylesheet for use in a pyqt5 application.
-
-    :param pyside: True to load the pyside rc file, False to load the PyQt rc file
-
     :return the stylesheet string
     """
     # Smart import of the rc file
-    import qdarkstyle.pyqt5_style_rc
-
+    import DarkStyle.pyqt5_style_rc
     # Load the stylesheet content from resources
     from PyQt5.QtCore import QFile, QTextStream
-
-    f = QFile(":qdarkstyle/style.qss")
+    f = QFile(":DarkStyle/style.qss")
     if not f.exists():
         _logger().error("Unable to load stylesheet, file not found in "
                         "resources")

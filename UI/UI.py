@@ -204,7 +204,10 @@ class Ui_MainWindow(object):
         self.since_brew.setAlignment(QtCore.Qt.AlignCenter)
         info_layout.addWidget(brew_date_box)
         info_layout.addWidget(since_brew_box)
-
+        self.brew_date.setStyleSheet("""QLabel{
+                Background-color:#42464a}""")
+        self.since_brew.setStyleSheet("""QLabel{
+                Background-color:#42464a}""")
 
 
 

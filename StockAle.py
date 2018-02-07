@@ -3,7 +3,7 @@
 # Copyright (C)2017 Andy Stopford
 # This is free software: you can redistribute it and/or modify
 # under the terms of the GNU General Public License
-# as published by the Free Software Foundation; version 2.
+# as published by the Free Software Foundation; version 3.
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -25,9 +25,8 @@ from operator import itemgetter
 from ingredients import*
 from SaveDialogue import SaveDialogue
 from PrefDialogue import PrefDialogue
-from ConversionWindow import*
-import qdarkstyle
-# Modified from https://github.com/ColinDuquesnoy/QDarkStyleSheet
+from ConversionWindow import ConversionWindow
+import DarkStyle
 
 
 class MainWindow(QtGui.QMainWindow):
@@ -60,10 +59,9 @@ class MainWindow(QtGui.QMainWindow):
                        'Jun': 6, 'Jul': 7,
                        'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12}
         self.palette = QtGui.QPalette()
-        QtGui.QApplication.setStyle(Qt.QStyleFactory.create('cleanlooks'))
+        #QtGui.QApplication.setStyle(Qt.QStyleFactory.create('cleanlooks'))
 
         # Connect signals to slots
-        self.ui.hcg.button_save_notes.clicked.connect(self.save_notes)
         self.ui.rcg.button_write_notes.clicked.connect(self.write_notes)
         self.ui.hcg.button_use_recipe.clicked.connect(self.use_recipe)
         self.ui.rcg.button_save_brew.clicked.connect(self.open_save_dlg)
@@ -73,19 +71,23 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.hyd_corr.triggered.connect(self.hydr_corr)
         self.ui.rcg.grain_use.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.ui.rcg.grain_use.connect(self.ui.rcg.grain_use, QtCore.SIGNAL
-        ("customContextMenuRequested(QPoint)"), self.grain_use_rclick)
+            ("customContextMenuRequested(QPoint)"), self.grain_use_rclick)
 
         self.ui.grain_stock.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.ui.grain_stock.setSelectionMode(QtGui.QAbstractItemView.
+                                             NoSelection)
         self.ui.grain_stock.connect(self.ui.grain_stock, QtCore.SIGNAL
-        ("customContextMenuRequested(QPoint)"), self.grain_stock_rclick)
+            ("customContextMenuRequested(QPoint)"), self.grain_stock_rclick)
 
         self.ui.hop_stock.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.ui.hop_stock.setSelectionMode(QtGui.QAbstractItemView.
+                                           NoSelection)
         self.ui.hop_stock.connect(self.ui.hop_stock, QtCore.SIGNAL
-        ("customContextMenuRequested(QPoint)"), self.hop_stock_rclick)
-
+            ("customContextMenuRequested(QPoint)"), self.hop_stock_rclick)
         self.ui.rcg.hop_use.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+
         self.ui.rcg.hop_use.connect(self.ui.rcg.hop_use, QtCore.SIGNAL
-        ("customContextMenuRequested(QPoint)"), self.hop_use_rclick)
+            ("customContextMenuRequested(QPoint)"), self.hop_use_rclick)
 
         self.ui.button_search.clicked.connect(self.search)
         self.ui.search_results.itemClicked.connect(self.load_search)
@@ -94,6 +96,8 @@ class MainWindow(QtGui.QMainWindow):
 
         # Sub-classed qt widgets, etc
         self.textEdit = QtGui.QTextEdit()
+        self.textEdit.setStyleSheet("""QTextEdit{Background-color:#1d1e1f;
+         color: #eff0f1}""")
         self.saveDialogue = SaveDialogue(self)
         self.prefDialogue = PrefDialogue(self)
         self.conversionWindow = ConversionWindow(self)
@@ -106,6 +110,8 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.rcg.button_commit.setEnabled(False)
         self.read_prefs()
         self.highlight_date()
+        self.ui.tasting_notes.installEventFilter(self)
+        self.ui.process_notes.installEventFilter(self)
 
     def read_prefs(self):
         style_list = []
@@ -152,7 +158,7 @@ class MainWindow(QtGui.QMainWindow):
         for item in styles:
             self.ui.box_style.addItem(item)
         if theme:
-            self.setStyleSheet(qdarkstyle.load_stylesheet(pyside=False))
+            self.setStyleSheet(DarkStyle.load_stylesheet())
         else:
             self.setStyleSheet(self.default_style_sheet)
     ###########################################################################
@@ -164,6 +170,16 @@ class MainWindow(QtGui.QMainWindow):
     def hydr_corr(self):
         """ Show the hydrometer correction window."""
         self.conversionWindow.exec_()
+
+    def eventFilter(self, source, event):
+        """Detect notes losing focus and save contents"""
+        if (event.type() == QtCore.QEvent.FocusOut and source is
+                self.ui.tasting_notes):
+            self.save_notes()
+        if (event.type() == QtCore.QEvent.FocusOut and source is
+                self.ui.process_notes):
+            self.save_notes()
+        return super(MainWindow, self).eventFilter(source, event)
 
     def keyPressEvent(self, qKeyEvent):
         """
@@ -239,23 +255,27 @@ class MainWindow(QtGui.QMainWindow):
         stock_list = []
         for row in range(self.ui.rcg.grain_use.rowCount()):
             if self.ui.rcg.grain_use.item(row, 0) is not None:
-                if self.ui.rcg.grain_use.item(row, 1) is not None:
-                    name = self.ui.rcg.grain_use.item(row, 0).text()
-                    wgt = float(self.ui.rcg.grain_use.item(row, 1).text())
-                    for item in self.grain_list:
-                        if name == item.get_name():
-                            stock_name = item.get_name()
-                            stock_list.append(stock_name)
-                            extr = item.get_extr()
-                            ebc = item.get_ebc()
-                    if name not in stock_list:
-                        self.error_message("Warning: " + name +
-                                           " not in stock")
-                        self.ui.rcg.grain_use.removeRow(row)
-                    else:
-                        total += wgt
-                        a_used_grain = Grain(name, ebc, extr, wgt)
-                        self.used_grain_list.append(a_used_grain)
+                if self.ui.rcg.grain_use.item(row, 1) is None:
+                    wgt = QtGui.QTableWidgetItem()
+                    self.ui.rcg.grain_use.setItem(row, 1, wgt)
+                    wgt.setText(str(0))
+
+                name = self.ui.rcg.grain_use.item(row, 0).text()
+                wgt = float(self.ui.rcg.grain_use.item(row, 1).text())
+                for item in self.grain_list:
+                    if name == item.get_name():
+                        stock_name = item.get_name()
+                        stock_list.append(stock_name)
+                        extr = item.get_extr()
+                        ebc = item.get_ebc()
+                if name not in stock_list:
+                    self.error_message("Warning: " + name +
+                                       " not in stock")
+                    self.ui.rcg.grain_use.removeRow(row)
+                else:
+                    total += wgt
+                    a_used_grain = Grain(name, ebc, extr, wgt)
+                    self.used_grain_list.append(a_used_grain)
         if total > 0:  # Calculate percentages in table
             for item in self.used_grain_list:
                 pos = self.used_grain_list.index(item)
@@ -657,6 +677,8 @@ class MainWindow(QtGui.QMainWindow):
         io.save_brew(fname, date)
 
     def load_brew(self, name, sr_flag):
+        self.ui.process_notes.clear()
+        self.ui.tasting_notes.clear()
         io = IO(self)
         io.load_brew(name, sr_flag)
 

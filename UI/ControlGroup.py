@@ -12,6 +12,8 @@ class ControlGroup(QtGui.QWidget):
         self.grain_use.setHorizontalHeaderLabels(['Grain', 'Kg.', '%'])
         self.grain_use.verticalHeader().setVisible(False)
         self.grain_use.setDragDropMode(QtGui.QAbstractItemView.DropOnly)
+        self.grain_use.setSelectionMode(QtGui.QAbstractItemView.
+                                               NoSelection)
         gr_use_header = self.grain_use.horizontalHeader()
         gr_use_header.setResizeMode(QtGui.QHeaderView.Stretch)
 
@@ -22,6 +24,8 @@ class ControlGroup(QtGui.QWidget):
         self.hop_use.setHorizontalHeaderLabels(['Hop', 'Grams', 'Minutes'])
         self.hop_use.verticalHeader().setVisible(False)
         self.hop_use.setDragDropMode(QtGui.QAbstractItemView.DropOnly)
+        self.hop_use.setSelectionMode(QtGui.QAbstractItemView.
+                                               NoSelection)
         hop_use_header = self.hop_use.horizontalHeader()
         hop_use_header.setResizeMode(QtGui.QHeaderView.Stretch)
 
@@ -93,11 +97,8 @@ class ControlGroup(QtGui.QWidget):
             button_bar.addWidget(self.button_commit)
         else:
             self.button_use_recipe = QtGui.QPushButton('Use Recipe')
-            self.button_save_notes = QtGui.QPushButton('Save Notes')
             self.button_use_recipe.setMinimumHeight(20)
-            self.button_save_notes.setMinimumHeight(20)
             button_bar.addWidget(self.button_use_recipe)
-            button_bar.addWidget(self.button_save_notes)
 
         top_display = QtGui.QHBoxLayout()
         top_display.addWidget(mash_temp_box)
