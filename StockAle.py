@@ -72,23 +72,15 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.rcg.grain_use.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.ui.rcg.grain_use.connect(self.ui.rcg.grain_use, QtCore.SIGNAL
             ("customContextMenuRequested(QPoint)"), self.grain_use_rclick)
-
         self.ui.grain_stock.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.ui.grain_stock.setSelectionMode(QtGui.QAbstractItemView.
-                                             NoSelection)
         self.ui.grain_stock.connect(self.ui.grain_stock, QtCore.SIGNAL
             ("customContextMenuRequested(QPoint)"), self.grain_stock_rclick)
-
         self.ui.hop_stock.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.ui.hop_stock.setSelectionMode(QtGui.QAbstractItemView.
-                                           NoSelection)
         self.ui.hop_stock.connect(self.ui.hop_stock, QtCore.SIGNAL
             ("customContextMenuRequested(QPoint)"), self.hop_stock_rclick)
         self.ui.rcg.hop_use.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-
         self.ui.rcg.hop_use.connect(self.ui.rcg.hop_use, QtCore.SIGNAL
             ("customContextMenuRequested(QPoint)"), self.hop_use_rclick)
-
         self.ui.button_search.clicked.connect(self.search)
         self.ui.search_results.itemClicked.connect(self.load_search)
         self.ui.file_list.itemClicked.connect(self.load_selecn)
