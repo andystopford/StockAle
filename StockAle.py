@@ -307,7 +307,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def grain_table_update(self):
         """ Fill cells in the grain stock table with instances
-        from grain_list.
+        from grain_list. If grain not in stock the text is greyed.
         """
         self.ui.grain_stock.clearContents()
         row_count = len(self.grain_list)  # Ensure extra rows available
@@ -320,6 +320,10 @@ class MainWindow(QtGui.QMainWindow):
             extr = Grain.get_extr(item)
             wgt = Grain.get_wgt(item)
             name = QtGui.QTableWidgetItem(name)
+            if float(wgt) <= 0:
+                in_stock = False
+            else:
+                in_stock = True
             self.ui.grain_stock.setItem(pos, 0, name)
             col = QtGui.QTableWidgetItem(ebc)
             self.ui.grain_stock.setItem(pos, 1, col)
@@ -327,6 +331,11 @@ class MainWindow(QtGui.QMainWindow):
             self.ui.grain_stock.setItem(pos, 2, extr)
             qty = QtGui.QTableWidgetItem(wgt)
             self.ui.grain_stock.setItem(pos, 3, qty)
+            if not in_stock:
+                for col in range(4):
+                    self.ui.grain_stock.item(pos, col).setTextColor\
+                        (QtGui.QColor('#697076'))
+
 
     def grain_stock_rclick(self):
         """ select entry to delete from grain stock table."""
@@ -430,11 +439,19 @@ class MainWindow(QtGui.QMainWindow):
             alpha = Hop.get_alpha(item)
             wgt = Hop.get_wgt(item)
             name = QtGui.QTableWidgetItem(name)
+            if float(wgt) <= 0:
+                in_stock = False
+            else:
+                in_stock = True
             self.ui.hop_stock.setItem(pos, 0, name)
             alpha = QtGui.QTableWidgetItem(alpha)
             self.ui.hop_stock.setItem(pos, 1, alpha)
             wgt = QtGui.QTableWidgetItem(wgt)
             self.ui.hop_stock.setItem(pos, 2, wgt)
+            if not in_stock:
+                for col in range(3):
+                    self.ui.hop_stock.item(pos, col).setTextColor\
+                        (QtGui.QColor('#697076'))
 
     def use_hop(self):
         """Reads entries in the hop_use table. If the weight or time
