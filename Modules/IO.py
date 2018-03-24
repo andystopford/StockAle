@@ -134,6 +134,9 @@ class IO:
         EBC = ET.SubElement(results, 'EBC')
         OG = ET.SubElement(results, 'OG')
         proc_note = ET.SubElement(notes, 'Process')
+        taste_note = ET.SubElement(notes, 'Tasting')
+        style = ET.SubElement(notes, 'Style')
+        rating = ET.SubElement(notes, 'Rating')
         for item in self.parent.used_grain_list:
             name = item.get_name()
             name = str(name)

@@ -11,7 +11,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 #
-# StockAle version 3.1  27/12/17
+# StockAle version 3.1  24/03/18
 #######################################################################
 import sys, math, os.path
 import xml.etree.cElementTree as ET
@@ -85,6 +85,8 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.search_results.itemClicked.connect(self.load_search)
         self.ui.file_list.itemClicked.connect(self.load_selecn)
         self.ui.calendar.clicked.connect(self.cell_clicked)
+        self.ui.box_style.currentIndexChanged.connect(self.save_notes)
+        self.ui.rating.valueChanged.connect(self.save_notes)
 
         # Sub-classed qt widgets, etc
         self.textEdit = QtGui.QTextEdit()
@@ -93,7 +95,6 @@ class MainWindow(QtGui.QMainWindow):
         self.saveDialogue = SaveDialogue(self)
         self.prefDialogue = PrefDialogue(self)
         self.conversionWindow = ConversionWindow(self)
-
         self.showMaximized()
 
     ########################################################################
