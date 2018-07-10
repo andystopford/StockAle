@@ -11,7 +11,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 #
-# StockAle version 3.1  24/03/18
+# StockAle version 3.1.1  10/07/18
 #######################################################################
 import sys, math, os.path
 import xml.etree.cElementTree as ET
@@ -351,7 +351,10 @@ class MainWindow(QtGui.QMainWindow):
         # Get the value in the right-clicked cell
         row = self.ui.grain_stock.currentRow()
         row = int(row)
-        self.grain_list.pop(row)
+        try:
+            self.grain_list.pop(row)
+        except IndexError:
+            pass
         self.grain_table_update()
         self.stock_dirty = True
 
@@ -367,7 +370,10 @@ class MainWindow(QtGui.QMainWindow):
         """ Delete used grain."""
         row = self.ui.rcg.grain_use.currentRow()
         row = int(row)
-        self.used_grain_list.pop(row)
+        try:
+            self.used_grain_list.pop(row)
+        except IndexError:
+            pass
         self.used_grain_update()
 
     def used_grain_update(self):
@@ -378,6 +384,8 @@ class MainWindow(QtGui.QMainWindow):
             name = Grain.get_name(item)
             wgt = str(Grain.get_wgt(item))
             name = QtGui.QTableWidgetItem(name)
+            name.setFlags(name.flags() & ~QtCore.Qt.ItemIsEditable)
+            name.setFlags(name.flags() & ~QtCore.Qt.ItemIsDropEnabled)
             self.ui.rcg.grain_use.setItem(pos, 0, name)
             wgt = QtGui.QTableWidgetItem(wgt)
             self.ui.rcg.grain_use.setItem(pos, 1, wgt)
@@ -532,7 +540,10 @@ class MainWindow(QtGui.QMainWindow):
         """ Delete hop from stock table."""
         row = self.ui.hop_stock.currentRow()
         row = int(row)
-        self.hop_list.pop(row)
+        try:
+            self.hop_list.pop(row)
+        except IndexError:
+            pass
         self.hop_table_update()
         self.stock_dirty = True
 
@@ -568,7 +579,10 @@ class MainWindow(QtGui.QMainWindow):
         """ Remove hop instance from used hop table."""
         row = self.ui.rcg.hop_use.currentRow()
         row = int(row)
-        self.used_hop_list.pop(row)
+        try:
+            self.used_hop_list.pop(row)
+        except IndexError:
+            pass
         self.used_hop_update()
 
     def used_hop_update(self):
@@ -580,6 +594,8 @@ class MainWindow(QtGui.QMainWindow):
             wgt = str(Hop.get_wgt(item))
             time = str(Hop.get_time(item))
             name = QtGui.QTableWidgetItem(name)
+            name.setFlags(name.flags() & ~QtCore.Qt.ItemIsEditable)
+            name.setFlags(name.flags() & ~QtCore.Qt.ItemIsDropEnabled)
             self.ui.rcg.hop_use.setItem(pos, 0, name)
             wgt = QtGui.QTableWidgetItem(wgt)
             self.ui.rcg.hop_use.setItem(pos, 1, wgt)

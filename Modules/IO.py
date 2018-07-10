@@ -103,18 +103,22 @@ class IO:
         taste = self.parent.ui.tasting_notes.toPlainText()
         rating = str(self.parent.ui.rating.value())
         brew_path = self.get_path() + 'Brews/'
-        path = brew_path + self.parent.recipe_filename
-        tree = ET.parse(path)
-        root = tree.getroot()
-        for elem in root.iter('Process'):
-            elem.text = str(proc_note)
-        for elem in root.iter('Style'):
-            elem.text = style
-        for elem in root.iter('Tasting'):
-            elem.text = str(taste)
-        for elem in root.iter('Rating'):
-            elem.text = rating
-        tree.write(path)
+        try:
+            path = brew_path + self.parent.recipe_filename
+            tree = ET.parse(path)
+            root = tree.getroot()
+            for elem in root.iter('Process'):
+                elem.text = str(proc_note)
+            for elem in root.iter('Style'):
+                elem.text = style
+            for elem in root.iter('Tasting'):
+                elem.text = str(taste)
+            for elem in root.iter('Rating'):
+                elem.text = rating
+            tree.write(path)
+        except TypeError:
+            # Event filter(?) causes exceptionj at start-up
+            print('No recipe filename set')
 
     def save_brew(self, fname, date):
         """ Save brew and enable Commit button if brew date is today or
