@@ -4,7 +4,8 @@ from PyQt4 import QtCore, QtGui
 class ControlGroup(QtGui.QWidget):
     def __init__(self, mode):
         QtGui.QWidget.__init__(self)
-
+        """A panel containing info boxes, some user modifiable, and control
+        buttons"""
         self.grain_use = QtGui.QTableWidget()
         self.grain_use.setColumnCount(3)
         self.grain_use.setRowCount(6)

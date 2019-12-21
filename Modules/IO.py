@@ -3,14 +3,17 @@ from PyQt4 import QtCore, QtGui
 import xml.etree.ElementTree as ET
 sys.path.append("./Modules")
 from ingredients import*
-
+from Model import*
 
 class IO:
     def __init__(self, parent):
         """ Utility to handle all file input/output."""
         self.parent = parent
+        self.month_to_num = dict(Jan=1, Feb=2, Mar=3, Apr=4, May=5, Jun=6,
+                                 Jul=7, Aug=8, Sep=9, Oct=10, Nov=11, Dec=12)
 
     def get_path(self):
+        """Gets path to data folder from prefs.xml preferences file"""
         with open('./prefs.xml', 'r') as fo:
             tree = ET.ElementTree(file=fo)
             root = tree.getroot()
@@ -18,7 +21,31 @@ class IO:
                 if elem.tag == 'Path':
                     path = elem.text + '/'
                     return path
-        
+
+    def open_brews(self):
+        """Open brew data"""
+        try:
+            path = self.get_path()
+            if path:
+                brew_path = path + 'Brews/'
+                brew_list = []
+                for brewFile in os.listdir(brew_path):
+                    if not brewFile.startswith('.'): # filter unix hidden files
+                        day = int(brewFile[0:2])
+                        month = str(brewFile[2:5])
+                        year = int('20' + brewFile[5:7])
+                        if year not in self.parent.model_dict:
+                            model = Model(self.parent)
+                            model.setup()
+                            model.set_year(year)
+                            self.parent.model_dict[year] = model
+                        month = self.month_to_num[month]
+                        date = QtCore.QDate(year, month, day)
+                        model = self.parent.model_dict[year]
+                        model.add_brew(date)
+        except:
+            print('Brew data not found')
+
     def save_data(self):
         """ Save stock data, with backup of previous save."""
         root = ET.Element('Root')
@@ -66,6 +93,7 @@ class IO:
         self.parent.stock_dirty = False
 
     def load_data(self):
+        """Loads stock data into application"""
         try:
             path = self.get_path()
             with open("{0}stockData.xml".format(path), "a"):
@@ -97,7 +125,7 @@ class IO:
             self.parent.error_message("No Stock Data Found")
 
     def save_notes(self):
-        """ Save notes, style and rating from Review Panel."""
+        """ Save notes, style and rating from selected brew."""
         proc_note = self.parent.ui.process_notes.toPlainText()
         style = str(self.parent.ui.box_style.currentText())
         taste = self.parent.ui.tasting_notes.toPlainText()
@@ -189,12 +217,10 @@ class IO:
         if days <= 0:
             self.parent.commit_enable()
 
-    def load_brew(self, name, sr_flag):
+    def load_brew(self, name):
         """Loads brew selected from calendar/search into review panel"""
         self.parent.grainRecipe_list = []
         self.parent.hopRecipe_list = []
-        if not sr_flag:
-            self.parent.ui.search_results.addItem(name)
         if name is False:
             fname = unicode(QtGui.QFileDialog.getOpenFileName(self.parent))
             self.parent.recipe_filename = os.path.basename(fname)
@@ -202,7 +228,7 @@ class IO:
             self.parent.recipe_filename = name
         path = self.get_path()
         path = path + '/Brews/' + self.parent.recipe_filename
-        self.parent.ui.history_box.setTitle(self.parent.recipe_filename)
+        self.parent.ui.date_box.setTitle(self.parent.recipe_filename)
         self.parent.ui.brew_date.setText(self.parent.recipe_filename)
         with open(path, "r"):
             tree = ET.ElementTree(file=path)
@@ -276,3 +302,4 @@ class IO:
                     vol = str(elem.text)
                     self.parent.ui.hcg.vol_disp.setText(vol)
         self.parent.time_ago()
+

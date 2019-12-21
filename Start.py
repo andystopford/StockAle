@@ -1,4 +1,4 @@
-#!/usr/bin/python3.4
+#!/usr/bin/python3.6
 import sys
 
 from PyQt4 import QtGui, Qt
@@ -15,6 +15,6 @@ if __name__ == "__main__":
     myapp = MainWindow()
     myapp.show()
     myapp.load_data()
-    myapp.init_params()
+    myapp.startup()
     splash.finish(myapp)
     sys.exit(app.exec_())

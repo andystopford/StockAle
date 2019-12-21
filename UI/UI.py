@@ -1,11 +1,13 @@
-
 import sys
 sys.path.append("./Modules")
 sys.path.append("./Data")
 
 from PyQt4 import QtCore, QtGui, Qt
-from BrewCalendar import*
-from ControlGroup import*
+from ControlGroup import ControlGroup
+from YearView import YearView
+from Preferences import Preferences
+from ColourSettings import ColourSettings
+from Calculators import Calculators
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -23,18 +25,19 @@ except AttributeError:
 
 
 class Ui_MainWindow(object):
-    def setupUi(self, MainWindow):
-        MainWindow.setObjectName(_fromUtf8("MainWindow"))
-        self.central_widget = QtGui.QWidget(MainWindow)
-        MainWindow.setCentralWidget(self.central_widget)
-        bar = QtGui.QMenuBar()
-        tools = bar.addMenu("Tools")
-        self.prefs = QtGui.QAction("Preferences", tools)
-        tools.addAction(self.prefs)
-        self.hyd_corr = QtGui.QAction("Hydrometer Correction", tools)
-        tools.addAction(self.hyd_corr)
-        MainWindow.setMenuBar(bar)
+    def setupUi(self, parent_window):
+        self.central_widget = QtGui.QWidget(parent_window)
+        parent_window.setCentralWidget(self.central_widget)
+        # the basic layout:
+        central_layout = QtGui.QGridLayout()
+        central_splitter = QtGui.QSplitter(Qt.Qt.Vertical)  # Below tabbed area
+        central_splitter.setSizes([300, 800])
+        central_layout.addWidget(central_splitter)
+        self.central_widget.setLayout(central_layout)
+        self.tabbed_area = QtGui.QTabWidget()
+        central_splitter.addWidget(self.tabbed_area)
 
+        # Tabbed Area
         # Stock group
         self.grain_stock = QtGui.QTableWidget()
         self.grain_stock.setColumnCount(4)
@@ -55,41 +58,49 @@ class Ui_MainWindow(object):
         self.hop_stock.setDragDropMode(QtGui.QAbstractItemView.DragOnly)
         hop_stck_header = self.hop_stock.horizontalHeader()
         hop_stck_header.setResizeMode(QtGui.QHeaderView.Stretch)
-
-        # the basic layout:
-        central_layout = QtGui.QGridLayout()
-        central_splitter = QtGui.QSplitter(Qt.Qt.Vertical)
-        central_layout.addWidget(central_splitter)
-        self.central_widget.setLayout(central_layout)
-
-        # Stock group
-        stock_box = QtGui.QGroupBox('Stock')
-        central_splitter.addWidget(stock_box)
+        
+        recipe_tab = QtGui.QWidget()
+        self.tabbed_area.addTab(recipe_tab, 'Recipe')
+        recipe_layout = QtGui.QVBoxLayout()
+        recipe_tab.setLayout(recipe_layout)
         stock_layout = QtGui.QHBoxLayout()
-        stock_box.setLayout(stock_layout)
         stock_layout.addWidget(self.grain_stock)
         stock_layout.addWidget(self.hop_stock)
+        recipe_layout.addLayout(stock_layout)
+        # Recipe
+        self.recipe_box = QtGui.QGroupBox('Current Recipe')
+        curr_recipe_layout = QtGui.QHBoxLayout()
+        self.recipe_box.setLayout(curr_recipe_layout)
+        self.rcg = ControlGroup('new')
+        curr_recipe_layout.addWidget(self.rcg)
+        recipe_layout.addWidget(self.recipe_box)
 
-        # Brewery area
-        brew_grp_split = QtGui.QSplitter(Qt.Qt.Horizontal)
-        central_splitter.addWidget(brew_grp_split)
-        brew_grp_split.setMinimumHeight(200)
+        # File group
+        file_tab = QtGui.QWidget()
+        self.tabbed_area.addTab(file_tab, 'Files')
+        # Top button bar
+        self.button_back = QtGui.QPushButton("<<")
+        self.button_forward = QtGui.QPushButton(">>")
+        self.label_year = QtGui.QLabel()
+        top_button_widget = QtGui.QWidget()
+        top_button_layout = QtGui.QHBoxLayout()
+        top_button_widget.setLayout(top_button_layout)
+        top_button_layout.addWidget(self.button_back)
+        top_button_layout.addWidget(self.label_year)
+        top_button_layout.addWidget(self.button_forward)
+        self.label_year.setAlignment(Qt.Qt.AlignCenter)
+        # Year view
+        self.yearView = YearView(parent_window)
 
-        # File search group
-        search_splitter = QtGui.QSplitter(Qt.Qt.Vertical)
-        self.file_search = QtGui.QTabWidget()
-        # Tabs - file
-        tab_file = QtGui.QWidget()
-        tab_file_layout = QtGui.QGridLayout()
-        tab_file.setLayout(tab_file_layout)
-        self.file_list = QtGui.QListWidget()
-        tab_file_layout.addWidget(self.file_list)
-        self.file_search.addTab(tab_file, 'File')
-        # Tabs - search
-        tab_search = QtGui.QWidget()
-        tab_search_layout = QtGui.QVBoxLayout()
-        tsl_filter_layout = QtGui.QHBoxLayout()
-        tsl_filter = QtGui.QWidget()
+        file_layout = QtGui.QVBoxLayout()
+        file_tab.setLayout(file_layout)
+        file_layout.addWidget(top_button_widget)
+        file_layout.addWidget(self.yearView)
+        # Search
+        search_layout = QtGui.QHBoxLayout()
+        search_panel = QtGui.QWidget()
+        label_search = QtGui.QLabel('Search For...')
+        label_results = QtGui.QLabel('Results')
         label_filter = QtGui.QLabel('Filter By Rating')
         label_filter.setAlignment(QtCore.Qt.AlignRight)
         plus_minus = chr(0x00B1)
@@ -98,64 +109,68 @@ class Ui_MainWindow(object):
         font.setPixelSize(20)
         label_plus_minus.setFont(font)
         label_plus_minus.setAlignment(QtCore.Qt.AlignRight)
+        self.search_box = QtGui.QLineEdit()
+        self.results_box = QtGui.QLineEdit()
+        self.button_clear = QtGui.QPushButton('Clear')
         self.rating_plus_minus = QtGui.QSpinBox()
         self.rating_input = QtGui.QSpinBox()
-        self.search_box = QtGui.QTextEdit()
         self.button_search = QtGui.QPushButton('Search')
-        tsl_filter_layout.addWidget(label_filter)
-        tsl_filter_layout.addWidget(self.rating_input)
-        tsl_filter_layout.addWidget(label_plus_minus)
-        tsl_filter_layout.addWidget(self.rating_plus_minus)
-        tsl_filter.setLayout(tsl_filter_layout)
-        tab_search_layout.addWidget(self.search_box)
-        tab_search_layout.addWidget(tsl_filter)
-        tab_search_layout.addWidget(self.button_search)
-        self.file_search.addTab(tab_search, 'Search')
-        tab_search.setLayout(tab_search_layout)
-        # Tabs - calendar
-        self.calendar = BrewCalendar()
-        self.file_search.addTab(self.calendar, 'Calendar')
+        self.button_search.setMinimumWidth(100)
+        self.button_clear.setMinimumWidth(100)
+        search_layout.addWidget(label_search)
+        search_layout.addWidget(self.search_box)
+        search_layout.addWidget(self.button_search)
 
-        # search results list
-        self.search_results = QtGui.QListWidget()
-        self.button_clear = QtGui.QPushButton('Clear')
-        search_res_box = QtGui.QGroupBox('Search Results')
-        search_res_box.setMaximumWidth(400)
-        search_res_box.setMaximumHeight(300)
-        search_res_layout = QtGui.QVBoxLayout()
-        search_res_box.setLayout(search_res_layout)
-        search_res_layout.addWidget(self.search_results)
-        search_res_layout.addWidget(self.button_clear)
-        search_splitter.addWidget(self.file_search)
-        search_splitter.addWidget(search_res_box)
-        brew_grp_split.addWidget(search_splitter)
+        search_layout.addWidget(self.button_clear)
+        search_layout.addWidget(label_filter)
+        search_layout.addWidget(self.rating_input)
+        search_layout.addWidget(label_plus_minus)
+        search_layout.addWidget(self.rating_plus_minus)
+        search_layout.addWidget(label_results)
+        search_layout.addWidget(self.results_box)
+        search_layout.addWidget(self.button_clear)
 
-        # Work group
-        work_area = QtGui.QWidget()
-        work_layout = QtGui.QVBoxLayout()
-        work_area.setLayout(work_layout)
-        work_splitter = QtGui.QSplitter(Qt.Qt.Vertical)
-        work_layout.addWidget(work_splitter)
-        brew_grp_split.addWidget(work_area)
-        # Recipe
-        self.recipe_box = QtGui.QGroupBox('Current Recipe')
-        recipe_layout = QtGui.QHBoxLayout()
-        self.recipe_box.setLayout(recipe_layout)
-        self.rcg = ControlGroup('new')
-        recipe_layout.addWidget(self.rcg)
-        work_splitter.addWidget(self.recipe_box)
+        search_panel.setLayout(search_layout)
+        file_layout.addWidget(search_panel)
+
+        # Settings Group
+        settings_tab = QtGui.QWidget()
+        self.tabbed_area.addTab(settings_tab, 'Settings')
+        settings_layout = QtGui.QHBoxLayout()
+        settings_tab.setLayout(settings_layout)
+        # Next line has to be before preferences to all preferences to load
+        # colour settings
+        self.colourSettings = ColourSettings(parent_window)
+        preferences = Preferences(parent_window)
+        settings_layout.addWidget(preferences)
+        preferences.setMaximumWidth(400)
+        settings_layout.addWidget(self.colourSettings)
+        self.colourSettings.setMaximumWidth(400)
+        calculators = Calculators()
+        settings_layout.addWidget(calculators)
+        calculators.setMaximumWidth(400)
+
+        spare_box = QtGui.QGroupBox()
+        settings_layout.addWidget(spare_box)
+
+    #######################################################################
         # History
-        self.history_box = QtGui.QGroupBox('Date')
-        history_layout = QtGui.QHBoxLayout()
-        self.history_box.setLayout(history_layout)
+        history_area = QtGui.QWidget()
+        history_layout = QtGui.QVBoxLayout()
+        history_area.setLayout(history_layout)
+        central_splitter.addWidget(history_area)
+        self.date_box = QtGui.QGroupBox('Date')
+        date_layout = QtGui.QVBoxLayout()
+        self.date_box.setLayout(date_layout)
+        sel_recipe_layout = QtGui.QHBoxLayout()
+        date_layout.addLayout(sel_recipe_layout)
         self.hcg = ControlGroup('history')
-        history_layout.addWidget(self.hcg)
-        work_splitter.addWidget(self.history_box)
+        sel_recipe_layout.addWidget(self.hcg)
+        history_layout.addWidget(self.date_box)
+
         # Notes
-        notes_box = QtGui.QGroupBox()
         notes_layout = QtGui.QHBoxLayout()
-        notes_box.setLayout(notes_layout)
-        work_splitter.addWidget(notes_box)
+        date_layout.addLayout(notes_layout)
         self.process_notes = QtGui.QTextEdit()
         proc_note_box = QtGui.QGroupBox('Process Notes')
         proc_notes_layout = QtGui.QVBoxLayout()

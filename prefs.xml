@@ -1,1 +1,1 @@
-<Root><Days>90</Days><Length>60</Length><Temp>66</Temp><Eff>75</Eff><Styles><IPA /><Summer_ale /></Styles><Theme>dark</Theme><Path>/home/andy/Projects/Programming/Python/StockAle/Data</Path></Root>
+<Root><Days>90</Days><Length>60</Length><Temp>66</Temp><Eff>75</Eff><Styles><IPA /><Summer_Ale /></Styles><Theme>dark</Theme><Path>/home/andy/Projects/Programming/Python/StockAle/Data</Path><WkDay>#c3daff</WkDay><WkEnd>#a0c3ff</WkEnd><BrDay>#fda07f</BrDay><SrchDay>#95ff99</SrchDay></Root>

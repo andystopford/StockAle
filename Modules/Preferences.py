@@ -2,32 +2,34 @@ from PyQt4 import QtCore, QtGui
 import os.path
 import xml.etree.cElementTree as ET
 
-
-class PrefDialogue(QtGui.QDialog):
+class Preferences(QtGui.QGroupBox):
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
-        """ A pop-up dialogue allowing the user to set application 
-        preferences.
-        """
-        self.resize(290, 330)
-        self.setWindowTitle("Preferences")
+        """UI for setting application preferences"""
+        #self.colourSettings = parent.ui.colourSettings
+        self.parent = parent
+        self.setTitle('Preferences')
+        self.setToolTip('Set application preferences here')
         # Widgets
-        self.label_days = QtGui.QLabel(self)
-        self.label_days.setText("<html><head/><body><p>Max number of days "
-                                "since brewing<br/>to display in timeline "
-                                "calendar</p></body></html>")
-        self.label_length = QtGui.QLabel(self)
-        self.label_length.setText(
-            "<html><head/><body><p>Brew Length (Litres)</p></body></html>")
-        self.label_temp = QtGui.QLabel(self)
-        self.label_temp.setText(
-            "<html><head/><body><p>Mash Temp (&deg;C)</p></body></html>")
-        self.label_eff = QtGui.QLabel(self)
-        self.label_eff.setText(
-            "<html><head/><body><p>Mash Efficiency %</p></body></html>")
-        self.label_theme = QtGui.QLabel(self)
-        self.label_theme.setText(
+        label_theme = QtGui.QLabel(self)
+        label_theme.setText(
             "<html><head/><body><p>Use Dark Theme</p></body></html>")
+        label_days = QtGui.QLabel(self)
+        label_days.setText("<html><head/><body><p>Max days since brewing"
+                                "<br/>to display</p></body></html>")
+        label_length = QtGui.QLabel(self)
+        label_length.setText(
+            "<html><head/><body><p>Brew Length (Litres)</p></body></html>")
+        label_temp = QtGui.QLabel(self)
+        label_temp.setText(
+            "<html><head/><body><p>Mash Temp (&deg;C)</p></body></html>")
+        label_eff = QtGui.QLabel(self)
+        label_eff.setText(
+            "<html><head/><body><p>Mash Efficiency %</p></body></html>")
+        label_styles = QtGui.QLabel(self)
+        label_styles.setText(
+            "<html><head/><body><p>User Specified Styles</p></body></html>")
+        self.checkbox_theme = QtGui.QCheckBox(self)
         self.spinBox_days = QtGui.QSpinBox(self)
         self.spinBox_days.setValue(90)
         self.spinBox_length = QtGui.QSpinBox(self)
@@ -36,7 +38,6 @@ class PrefDialogue(QtGui.QDialog):
         self.spinBox_temp.setValue(66)
         self.spinBox_eff = QtGui.QSpinBox(self)
         self.spinBox_eff.setValue(75)
-        self.checkbox_theme = QtGui.QCheckBox(self)
 
         self.button_data_path = QtGui.QPushButton(self)
         self.button_data_path.setText("Data Path")
@@ -45,6 +46,7 @@ class PrefDialogue(QtGui.QDialog):
         self.data_path_display.setFixedHeight(35)
         default_path = './Data/'
         self.data_path_display.setPlainText(default_path)
+        self.data_path_display.setToolTip(self.data_path_display.toPlainText())
 
         self.styleTable = QtGui.QTableWidget(self)
         self.styleTable.setColumnCount(1)
@@ -60,27 +62,31 @@ class PrefDialogue(QtGui.QDialog):
         self.button_apply = QtGui.QPushButton(self)
         self.button_apply.setText("Apply")
         self.button_apply.clicked.connect(self.apply)
+
         # Layout
         container = QtGui.QVBoxLayout()
+        container.setMargin(10)
         box = QtGui.QGridLayout()
         self.setLayout(container)
         container.addLayout(box)
-        box.addWidget(self.spinBox_days, 0, 0)
-        box.addWidget(self.label_days, 0, 1)
-        box.addWidget(self.spinBox_length, 1, 0)
-        box.addWidget(self.label_length, 1, 1)
-        box.addWidget(self.spinBox_temp, 2, 0)
-        box.addWidget(self.label_temp, 2, 1)
-        box.addWidget(self.spinBox_eff, 3, 0)
-        box.addWidget(self.label_eff, 3, 1)
-        box.addWidget(self.checkbox_theme, 4, 0)
-        box.addWidget(self.label_theme, 4, 1)
-        box.addWidget(self.button_data_path, 5, 0)
-        box.addWidget(self.data_path_display, 5, 1)
-        container.addWidget(self.styleTable)
+        box.addWidget(self.checkbox_theme, 0, 0)
+        box.addWidget(label_theme, 0, 1)
+        box.addWidget(self.spinBox_days, 1, 0)
+        box.addWidget(label_days, 1, 1)
+        box.addWidget(self.spinBox_length, 2, 0)
+        box.addWidget(label_length, 2, 1)
+        box.addWidget(self.spinBox_temp, 3, 0)
+        box.addWidget(label_temp, 3, 1)
+        box.addWidget(self.spinBox_eff, 4, 0)
+        box.addWidget(label_eff, 4, 1)
+        box.addWidget(self.styleTable, 5, 0)
+        box.addWidget(label_styles, 5, 1)
+        box.addWidget(self.button_data_path, 6, 0)
+        box.addWidget(self.data_path_display, 6, 1)
         container.addWidget(self.button_apply)
 
-        self.path = './prefs.xml'
+        path = os.getcwd()
+        self.path = path + '/prefs.xml'
         self.styleList = []
         self.init_params()
 
@@ -99,14 +105,17 @@ class PrefDialogue(QtGui.QDialog):
         """" Set path for data/brew save."""
         dialogue = QtGui.QFileDialog(self)
         dialogue.setFileMode(QtGui.QFileDialog.AnyFile)
+        # dialogue.setOption(QtGui.QFileDialog.DontUseNativeDialog) win/OSX?
         sel = dialogue.getExistingDirectory()
         self.data_path_display.setPlainText(sel)
+        self.data_path_display.setToolTip(self.data_path_display.toPlainText())
 
     def init_params(self):
         """ Populates the dialogue with values from prefs.xml."""
+        colourSettings = self.parent.ui.colourSettings
         try:
             with open(self.path, "r") as fo:
-                tree = ET.ElementTree(file=self.path)
+                tree = ET.ElementTree(file=fo)
                 root = tree.getroot()
                 for elem in root.iter():
                     if elem.tag == 'Days':
@@ -127,9 +136,12 @@ class PrefDialogue(QtGui.QDialog):
                     if elem.tag == 'Path':
                         data_path = elem.text
                         self.data_path_display.setPlainText(data_path)
+                    if elem.tag == 'WkDay':
+                        # TODO load at startup
+                        colourSettings.weekday_col = elem.text
             self.styleTable_update()
         except:
-            print("No Preference File Found (prefDialogue)")
+            print("No Preference File Found (Preferences)")
 
     def styleTable_update(self):
         """ Adjusts table to number of entries."""
@@ -184,13 +196,13 @@ class PrefDialogue(QtGui.QDialog):
         eff = str(self.spinBox_eff.text())
         theme = self.checkbox_theme.checkState()
         path = str(self.data_path_display.toPlainText())
-        par = self.parent()
+        par = self.parent
         par.set_prefs(days, length, temp, eff, self.styleList, theme)
         self.save(days, length, temp, eff, theme, path)
-        self.close()
 
     def save(self, days, length, temp, eff, theme, path):
         """Writes preferences to prefs.xml file."""
+        colourSettings = self.parent.ui.colourSettings
         root = ET.Element('Root')
         days_tag = ET.SubElement(root, 'Days')
         len_tag = ET.SubElement(root, 'Length')
@@ -199,6 +211,10 @@ class PrefDialogue(QtGui.QDialog):
         styles = ET.SubElement(root, 'Styles')
         ui_theme = ET.SubElement(root, 'Theme')
         path_tag = ET.SubElement(root, 'Path')
+        wkday_col = ET.SubElement(root, 'WkDay')
+        wkend_col = ET.SubElement(root, 'WkEnd')
+        brday_col = ET.SubElement(root, 'BrDay')
+        srchday_col = ET.SubElement(root, 'SrchDay')
         days_tag.text = str(days)
         len_tag.text = str(length)
         temp_tag.text = str(temp)
@@ -213,7 +229,10 @@ class PrefDialogue(QtGui.QDialog):
                 style = str(self.styleTable.item(row, 0).text())
                 style = style.replace(' ', '_')  # Prevent XML errors
                 style = ET.SubElement(styles, style)
+        wkday_col.text = colourSettings.weekday_col.name()
+        wkend_col.text = colourSettings.weekend_col.name()
+        brday_col.text = colourSettings.brewday_col.name()
+        srchday_col.text = colourSettings.searchday_col.name()
         with open(self.path, "wb") as fo:
             tree = ET.ElementTree(root)
             tree.write(fo)
-

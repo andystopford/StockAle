@@ -1,4 +1,4 @@
-#!/usr/bin/python3.4
+#!/usr/bin/python3.6
 ######################################################################
 # Copyright (C)2017 Andy Stopford
 # This is free software: you can redistribute it and/or modify
@@ -11,7 +11,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 #
-# StockAle version 3.1.1  10/07/18
+# StockAle version 4.0.0  21/12/19
 #######################################################################
 import sys, math, os.path
 import xml.etree.cElementTree as ET
@@ -20,14 +20,12 @@ sys.path.append("./Data")
 sys.path.append("./UI")
 from PyQt4 import QtCore, QtGui, Qt
 from UI import Ui_MainWindow
-from IO import*
-from operator import itemgetter
-from ingredients import*
+from IO import IO
+from ingredients import Grain, Hop
 from SaveDialogue import SaveDialogue
-from PrefDialogue import PrefDialogue
-from ConversionWindow import ConversionWindow
 import DarkStyle
-
+from Model import Model
+import datetime
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
@@ -59,16 +57,15 @@ class MainWindow(QtGui.QMainWindow):
                        'Jun': 6, 'Jul': 7,
                        'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12}
         self.palette = QtGui.QPalette()
-        #QtGui.QApplication.setStyle(Qt.QStyleFactory.create('cleanlooks'))
 
         # Connect signals to slots
+        self.ui.button_back.clicked.connect(self.year_back)
+        self.ui.button_forward.clicked.connect(self.year_forward)
         self.ui.rcg.button_write_notes.clicked.connect(self.write_notes)
         self.ui.hcg.button_use_recipe.clicked.connect(self.use_recipe)
         self.ui.rcg.button_save_brew.clicked.connect(self.open_save_dlg)
         self.ui.rcg.button_commit.clicked.connect(self.commit)
         self.ui.button_clear.clicked.connect(self.clear_search)
-        self.ui.prefs.triggered.connect(self.prefs)
-        self.ui.hyd_corr.triggered.connect(self.hydr_corr)
         self.ui.rcg.grain_use.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.ui.rcg.grain_use.connect(self.ui.rcg.grain_use, QtCore.SIGNAL
             ("customContextMenuRequested(QPoint)"), self.grain_use_rclick)
@@ -82,9 +79,6 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.rcg.hop_use.connect(self.ui.rcg.hop_use, QtCore.SIGNAL
             ("customContextMenuRequested(QPoint)"), self.hop_use_rclick)
         self.ui.button_search.clicked.connect(self.search)
-        self.ui.search_results.itemClicked.connect(self.load_search)
-        self.ui.file_list.itemClicked.connect(self.load_selecn)
-        self.ui.calendar.clicked.connect(self.cell_clicked)
         self.ui.box_style.currentIndexChanged.connect(self.save_notes)
         self.ui.rating.valueChanged.connect(self.save_notes)
 
@@ -93,20 +87,47 @@ class MainWindow(QtGui.QMainWindow):
         self.textEdit.setStyleSheet("""QTextEdit{Background-color:#1d1e1f;
          color: #eff0f1}""")
         self.saveDialogue = SaveDialogue(self)
-        self.prefDialogue = PrefDialogue(self)
-        self.conversionWindow = ConversionWindow(self)
         self.showMaximized()
+
+        self.model_dict = {}
+        self.year = 0
+        self.dirty = False
 
     ########################################################################
     # Initialise some stuff
-    def init_params(self):
+    def startup(self):
         self.ui.rcg.button_commit.setEnabled(False)
         self.read_prefs()
-        self.highlight_date()
         self.ui.tasting_notes.installEventFilter(self)
         self.ui.process_notes.installEventFilter(self)
+        today = datetime.date.today()
+        self.year = today.year
+        self.dirty = False
+        self.setup_year()
+
+    def setup_year(self):
+        """Populates current year from brew files"""
+        io = IO(self)
+        io.open_brews()
+        self.model = self.model_dict[self.year]
+        self.model.set_year(self.year)
+        self.ui.yearView.setModel(self.model)
+        self.ui.yearView.set_selection_model(self.model)
+        self.ui.label_year.setText(str(self.year))
+
+    def year_back(self):
+        """YearView back button"""
+        self.year -= 1
+        self.setup_year()
+
+    def year_forward(self):
+        """YearView forward button"""
+        self.year += 1
+        self.setup_year()
 
     def read_prefs(self):
+        """Reads preferences saved in 'prefx.xml' file"""
+        self.ui.colourSettings.defaults()
         style_list = []
         try:
             path = './prefs.xml'
@@ -128,11 +149,11 @@ class MainWindow(QtGui.QMainWindow):
                             style_list.append(style)
                     if elem.tag == 'Theme':
                         if elem.text == 'dark':
-                            theme = True
+                            dark_theme = True
                         else:
-                            theme = False
+                            dark_theme = False
             self.set_prefs(max_display, length, mash_temp,
-                           mash_eff, style_list, theme)
+                           mash_eff, style_list, dark_theme)
         except:
             with open('prefs.xml', 'wb') as fo:
                 root = ET.Element('Root')
@@ -141,7 +162,8 @@ class MainWindow(QtGui.QMainWindow):
                 self.error_message("No Preferences Set")
                 self.prefs()
 
-    def set_prefs(self, days, length, temp, eff, styles, theme):
+    def set_prefs(self, days, length, temp, eff, styles, dark_theme):
+        """Applies preferences"""
         self.max_display = days
         self.ui.rcg.vol_disp.setText(length)
         self.ui.rcg.mash_temp_disp.setText(temp)
@@ -150,20 +172,17 @@ class MainWindow(QtGui.QMainWindow):
         styles.sort()
         for item in styles:
             self.ui.box_style.addItem(item)
-        if theme:
+        # Available QStyle keys: 'Breeze', 'Windows', 'Motif', 'CDE',
+        # 'Plastique', 'GTK+', 'Cleanlooks'
+        if dark_theme:
             self.setStyleSheet(DarkStyle.load_stylesheet())
+            QtGui.QApplication.setStyle(Qt.QStyleFactory.create('Breeze'))
         else:
             self.setStyleSheet(self.default_style_sheet)
+            QtGui.QApplication.setStyle(Qt.QStyleFactory.create('cleanlooks'))
+
     ###########################################################################
-    # Miscellaneous
-    def prefs(self):
-        """ Show the Preferences dialogue."""
-        self.prefDialogue.exec_()
-
-    def hydr_corr(self):
-        """ Show the hydrometer correction window."""
-        self.conversionWindow.exec_()
-
+    # Event handlers
     def eventFilter(self, source, event):
         """Detect notes losing focus and save contents"""
         if (event.type() == QtCore.QEvent.FocusOut and source is
@@ -278,7 +297,7 @@ class MainWindow(QtGui.QMainWindow):
                 perCent = QtGui.QTableWidgetItem(perCent)
                 self.ui.rcg.grain_use.setItem(pos, 2, perCent)
         row_count = len(self.used_grain_list)  # Ensure extra rows available
-        if row_count > 6:
+        if row_count > 5:
             self.ui.rcg.grain_use.setRowCount(row_count + 1)
         self.ui.rcg.grain_use.clearSelection()
         self.grain_info_calc()
@@ -505,7 +524,7 @@ class MainWindow(QtGui.QMainWindow):
                     self.used_hop_list.append(a_used_hop)
                     adj_alpha = None
         row_count = len(self.used_hop_list)  # Ensure extra rows available
-        if row_count > 6:
+        if row_count > 5:
             self.ui.rcg.hop_use.setRowCount(row_count + 1)
         self.ui.rcg.hop_use.clearSelection()
         self.hop_info_calc()
@@ -684,6 +703,7 @@ class MainWindow(QtGui.QMainWindow):
     ###########################################################################
     # Save/Load brew
     def write_notes(self):
+        """Opens process notes floating window"""
         posn = (QtGui.QCursor.pos())
         self.textEdit.setGeometry((posn.x()) - 460, posn.y(), 400, 200)
         self.textEdit.setWindowTitle("Process Notes")
@@ -701,12 +721,14 @@ class MainWindow(QtGui.QMainWindow):
     def save_brew(self, fname, date):
         io = IO(self)
         io.save_brew(fname, date)
+        self.init_model()
 
-    def load_brew(self, name, sr_flag):
+    def load_brew(self, name):
+        """Displays selected brew in history area"""
         self.ui.process_notes.clear()
         self.ui.tasting_notes.clear()
         io = IO(self)
-        io.load_brew(name, sr_flag)
+        io.load_brew(name)
 
     ###########################################################################
     def use_recipe(self):
@@ -744,6 +766,7 @@ class MainWindow(QtGui.QMainWindow):
             temp = self.ui.hcg.mash_temp_disp.text()
             self.ui.rcg.mash_temp_disp.setText(temp)
             self.ui.recipe_box.setTitle("Unsaved Brew")
+            self.ui.tabbed_area.setCurrentIndex(0)
 
     def time_ago(self):
         """ Calculate and display time since brewed."""
@@ -766,6 +789,7 @@ class MainWindow(QtGui.QMainWindow):
             self.ui.since_brew.setText('Out of Range')
 
     def error_message(self, msg):
+        """Show a message box"""
         mb = QtGui.QMessageBox()
         mb.setText(msg)
         mb.exec_()
@@ -779,34 +803,11 @@ class MainWindow(QtGui.QMainWindow):
             os.makedirs(brew_path, exist_ok=True)
             return brew_path
 
-    def highlight_date(self):
-        """ Reads list of brews in brew folder to populate File List and
-        Search Calendar.
-        """
-        brew_path = self.get_brew_path()
-        if brew_path:
-            brew_list = []
-            file_list = []
-            for brewFile in os.listdir(brew_path):
-                if not brewFile.startswith('.'):  # filter unix hidden files
-                    day = int(brewFile[0:2])
-                    month = str(brewFile[2:5])
-                    year = int('20' + brewFile[5:7])
-                    num_month = int(self.months[month])
-                    date = QtCore.QDate(year, num_month, day)
-                    brew_list.append(date)  # list of dates for calendar
-                    date_tuple = (day, num_month, year, brewFile) # for sorting
-                    file_list.append(date_tuple)  # in file list pane
-            self.ui.calendar.dates(brew_list)  # adds dates to calendar
-            # sort by year, month, day
-            for item in sorted(file_list, key=itemgetter(2, 1, 0)):
-                self.ui.file_list.addItem(item[3])  # sorted list
-
     def load_selecn(self):
         """ Load a saved brew."""
         basename = self.ui.file_list.currentItem()
         basename = basename.text()
-        self.load_brew(basename, False)
+        self.load_brew(basename)
 
     def search(self):
         """ Search by keyword and/or rating in brew files, and display
@@ -814,72 +815,91 @@ class MainWindow(QtGui.QMainWindow):
         """
         brew_path = self.get_brew_path()
         word_list = []
-        search_word = str(self.ui.search_box.toPlainText())
-        for item in search_word.split():
-            word_list.append(item)
-        result = []
-        rating_list = []
-        rating = int(self.ui.rating_input.value())
-        rating_range = self.ui.rating_plus_minus.value()
-        if rating != 0:
-            for brew_file in os.listdir(brew_path):
-                if not brew_file.startswith('.'):  # filter unix hidden files
-                    with open(brew_path + brew_file) as brew:
-                        tree = ET.parse(brew)
-                        root = tree.getroot()
-                        for elem in root.iter():
-                            if elem.tag == 'Rating':
-                                if elem.text is None:
-                                    elem.text = 0
-                                brew_rating = int(elem.text)
-                                if rating - rating_range <= brew_rating <= \
-                                        rating + rating_range:
-                                    rating_list.append(brew_file)
-            # now search only the files in rating_list
-            for brew_file in rating_list:
-                with open(brew_path + brew_file) as brew:
-                    for line in brew:
-                        if search_word.lower() in line.lower():
-                            if brew_file not in result:
-                                result.append(brew_file)
-                                # condition if rating not entered
+        search_word = str(self.ui.search_box.text())
+        if not search_word:
+            pass
         else:
-            for brew_file in os.listdir(brew_path):
-                if not brew_file.startswith('.'):
+            for item in search_word.split():
+                word_list.append(item)
+            result = []
+            rating_list = []
+            rating = int(self.ui.rating_input.value())
+            rating_range = self.ui.rating_plus_minus.value()
+            if rating != 0:
+                for brew_file in os.listdir(brew_path):
+                    if not brew_file.startswith('.'):# filter unix hidden files
+                        with open(brew_path + brew_file) as brew:
+                            tree = ET.parse(brew)
+                            root = tree.getroot()
+                            for elem in root.iter():
+                                if elem.tag == 'Rating':
+                                    if elem.text is None:
+                                        elem.text = 0
+                                    brew_rating = int(elem.text)
+                                    if rating - rating_range <= brew_rating \
+                                            <= rating + rating_range:
+                                        rating_list.append(brew_file)
+                # now search only the files in rating_list
+                for brew_file in rating_list:
                     with open(brew_path + brew_file) as brew:
                         for line in brew:
-                            for item in word_list:
-                                if item.lower() in line.lower():
-                                    if brew_file not in result:
-                                        result.append(brew_file)
-        if search_word == "":
-            filler = ''
-        else:
-            filler = ' '
-        heading = search_word + filler + '(' + 'Rating' + ' ' + str(rating) + \
-            ' ' + u"\u00B1" + str(rating_range) + ')'
-        heading = QtGui.QListWidgetItem(heading)
-        heading.setFont(QtGui.QFont('Sans Serif', 9, QtGui.QFont.Bold))
-        self.ui.search_results.addItem(heading)
-        if result != []:
-            self.ui.search_results.addItems(result)
-            self.ui.search_results.addItem("")
-        else:
-            self.ui.search_results.addItem("Not Found")
-            self.ui.search_results.addItem("")
+                            if search_word.lower() in line.lower():
+                                if brew_file not in result:
+                                    result.append(brew_file)
+                                    # condition if rating not entered
+            else:
+                for brew_file in os.listdir(brew_path):
+                    if not brew_file.startswith('.'):
+                        with open(brew_path + brew_file) as brew:
+                            for line in brew:
+                                for item in word_list:
+                                    if item.lower() in line.lower():
+                                        if brew_file not in result:
+                                            result.append(brew_file)
+            if result != []:
+                results_all = ''
+                for item in result:
+                    results_all = results_all + item + ', '
+                # Remove last comma
+                results_all = results_all[0:len(results_all) - 2]
+                self.ui.results_box.setText(results_all)
+                self.convert_search(result)
+            else:
+                self.error_message("No Result Found")
 
-    def load_search(self):
-        """ Select brew from search results."""
-        base_name = self.ui.search_results.currentItem()
-        base_name = base_name.text()
-        self.load_brew(base_name, True)
+    def convert_search(self, result):
+        """Converts brew file names to QDates and sends date to the
+        appropriate model"""
+        for date in result:
+            day = int(date[0:2])
+            month = date[2:5]
+            month = self.months[month]  # Convert month name to number
+            year = date[5:7]
+            year = int(str(20) + year)
+            date = QtCore.QDate(year, month, day)
+            if year not in self.model_dict:
+                model = Model(self)
+                model.set_year(year)
+                self.model_dict[self.year] = model
+            model = self.model_dict[year]
+            model.display_search(date)
 
     def clear_search(self):
-        self.ui.search_results.clear()
-        self.ui.search_box.clear()
+        """Clears search from all models"""
+        for key in self.model_dict:
+            model = self.model_dict[key]
+            model.clear_search()
+            model.setup()
+            model.set_year(key)
+            self.ui.search_box.clear()
+            self.ui.results_box.clear()
+        self.setup_year()
 
     ###########################################################################
-    # Brew calendar
+    # YearView
+    def cell_clicked(self, date):
+        self.select_brew(date)
+
     def select_brew(self, date):
         day = date.day()
         month = date.month()
@@ -891,10 +911,7 @@ class MainWindow(QtGui.QMainWindow):
             day = "0" + str(day)
         day = str(day)
         brew = day + month + year
-        self.load_brew(brew, False)
-
-    def cell_clicked(self, date):
-        self.select_brew(date)
+        self.load_brew(brew)
 
     ###########################################################################
     def closeEvent(self, event):

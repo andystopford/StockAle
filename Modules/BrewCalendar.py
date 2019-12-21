@@ -4,7 +4,8 @@ from PyQt4 import QtGui
 class BrewCalendar(QtGui.QCalendarWidget):
     def __init__(self):
         QtGui.QCalendarWidget.__init__(self)
-        """ Sub-classed QCalendar provides ability to colour code cells."""
+        """ Sub-classed QCalendar provides ability to colour code cells.
+        Used by SaveDialogue"""
         self.setHorizontalHeaderFormat(QtGui.QCalendarWidget.
                                        SingleLetterDayNames)
         self.color = QtGui.QColor(self.palette().
