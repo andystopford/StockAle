@@ -33,7 +33,7 @@ class MainWindow(QtGui.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.default_style_sheet = self.styleSheet()
-        self.setWindowTitle("StockAle v.3.1")
+        self.setWindowTitle("StockAle v.4.0")
         self.setWindowIcon(QtGui.QIcon('./pint_icon.png'))
         self.max_display = 90
         self.grain_list = []
@@ -109,7 +109,11 @@ class MainWindow(QtGui.QMainWindow):
         """Populates current year from brew files"""
         io = IO(self)
         io.open_brews()
-        self.model = self.model_dict[self.year]
+        try:
+            self.model = self.model_dict[self.year]
+        except:
+            self.model = Model(self)
+            self.model.setup()
         self.model.set_year(self.year)
         self.ui.yearView.setModel(self.model)
         self.ui.yearView.set_selection_model(self.model)
