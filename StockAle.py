@@ -11,7 +11,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 #
-# StockAle version 4.0.0  21/12/19
+# StockAle version 4.0.1  11/02/20
 #######################################################################
 import sys, math, os.path
 import xml.etree.cElementTree as ET
@@ -26,6 +26,7 @@ from SaveDialogue import SaveDialogue
 import DarkStyle
 from Model import Model
 import datetime
+from decimal import Decimal
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
@@ -545,6 +546,11 @@ class MainWindow(QtGui.QMainWindow):
                 wgt = float(Hop.get_wgt(item))
                 alpha = float(Hop.get_alpha(item))
                 time = float(Hop.get_time(item))
+                # Negative time represents hop stand at 80 C
+                if time < 0:
+                    time = - time
+                    time = time * 0.25
+                    print(time)
                 boil_comp = 1 - math.e ** (curve * time)
                 ut = base_utn * boil_comp
                 ebu = (wgt * alpha * ut) / (vol * 10)
@@ -673,6 +679,8 @@ class MainWindow(QtGui.QMainWindow):
                     if grain_name == used_name:
                         grain.wgt = float(grain.wgt)
                         grain.wgt -= used_wgt
+                        grain.wgt = Decimal(grain.wgt)
+                        grain.wgt = round(grain.wgt, 2)
                         if grain.wgt < 0:
                             grain.wgt = 0
                         grain.wgt = str(grain.wgt)
@@ -725,7 +733,7 @@ class MainWindow(QtGui.QMainWindow):
     def save_brew(self, fname, date):
         io = IO(self)
         io.save_brew(fname, date)
-        self.init_model()
+        self.setup_year()
 
     def load_brew(self, name):
         """Displays selected brew in history area"""
