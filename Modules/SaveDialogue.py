@@ -1,20 +1,21 @@
-from PyQt4 import QtCore, QtGui
 from BrewCalendar import BrewCalendar
+from PyQt5 import QtCore, QtWidgets
 
-class SaveDialogue(QtGui.QDialog):
+
+class SaveDialogue(QtWidgets.QDialog):
     def __init__(self, parent = None):
-        QtGui.QWidget.__init__(self, parent)
+        super().__init__(parent)
         """ Popup dialogue to save the current brew, with calendar for 
         selecting brew-day/filename.
         """
         self.brew_calendar = BrewCalendar()
         self.parent = parent
-        central_layout = QtGui.QVBoxLayout()
-        button_layout = QtGui.QVBoxLayout()
-        grp_box_layout = QtGui.QVBoxLayout()
-        name_box = QtGui.QGroupBox('Saving As:')
-        self.button_save = QtGui.QPushButton('Save')
-        self.name_disp = QtGui.QTextEdit()
+        central_layout = QtWidgets.QVBoxLayout()
+        button_layout = QtWidgets.QVBoxLayout()
+        grp_box_layout = QtWidgets.QVBoxLayout()
+        name_box = QtWidgets.QGroupBox('Saving As:')
+        self.button_save = QtWidgets.QPushButton('Save')
+        self.name_disp = QtWidgets.QTextEdit()
         self.name_disp.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.name_disp.setTextInteractionFlags(QtCore.Qt.NoTextInteraction)
         self.name_disp.setMaximumHeight(25)

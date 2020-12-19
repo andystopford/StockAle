@@ -1,72 +1,74 @@
-from PyQt4 import QtCore, QtGui
 import os.path
 import xml.etree.cElementTree as ET
 
-class Preferences(QtGui.QGroupBox):
+from PyQt5 import QtCore, QtGui, QtWidgets
+
+
+class Preferences(QtWidgets.QGroupBox):
     def __init__(self, parent=None):
-        QtGui.QWidget.__init__(self, parent)
+        super().__init__(parent)
         """UI for setting application preferences"""
         #self.colourSettings = parent.ui.colourSettings
         self.parent = parent
         self.setTitle('Preferences')
         self.setToolTip('Set application preferences here')
         # Widgets
-        label_theme = QtGui.QLabel(self)
+        label_theme = QtWidgets.QLabel(self)
         label_theme.setText(
             "<html><head/><body><p>Use Dark Theme</p></body></html>")
-        label_days = QtGui.QLabel(self)
+        label_days = QtWidgets.QLabel(self)
         label_days.setText("<html><head/><body><p>Max days since brewing"
                                 "<br/>to display</p></body></html>")
-        label_length = QtGui.QLabel(self)
+        label_length = QtWidgets.QLabel(self)
         label_length.setText(
             "<html><head/><body><p>Brew Length (Litres)</p></body></html>")
-        label_temp = QtGui.QLabel(self)
+        label_temp = QtWidgets.QLabel(self)
         label_temp.setText(
             "<html><head/><body><p>Mash Temp (&deg;C)</p></body></html>")
-        label_eff = QtGui.QLabel(self)
+        label_eff = QtWidgets.QLabel(self)
         label_eff.setText(
             "<html><head/><body><p>Mash Efficiency %</p></body></html>")
-        label_styles = QtGui.QLabel(self)
+        label_styles = QtWidgets.QLabel(self)
         label_styles.setText(
             "<html><head/><body><p>User Specified Styles</p></body></html>")
-        self.checkbox_theme = QtGui.QCheckBox(self)
-        self.spinBox_days = QtGui.QSpinBox(self)
+        self.checkbox_theme = QtWidgets.QCheckBox(self)
+        self.spinBox_days = QtWidgets.QSpinBox(self)
         self.spinBox_days.setValue(90)
-        self.spinBox_length = QtGui.QSpinBox(self)
+        self.spinBox_length = QtWidgets.QSpinBox(self)
         self.spinBox_length.setValue(60)
-        self.spinBox_temp = QtGui.QSpinBox(self)
+        self.spinBox_temp = QtWidgets.QSpinBox(self)
         self.spinBox_temp.setValue(66)
-        self.spinBox_eff = QtGui.QSpinBox(self)
+        self.spinBox_eff = QtWidgets.QSpinBox(self)
         self.spinBox_eff.setValue(75)
 
-        self.button_data_path = QtGui.QPushButton(self)
+        self.button_data_path = QtWidgets.QPushButton(self)
         self.button_data_path.setText("Data Path")
         self.button_data_path.clicked.connect(self.get_data_path)
-        self.data_path_display = QtGui.QPlainTextEdit(self)
+        self.data_path_display = QtWidgets.QPlainTextEdit(self)
         self.data_path_display.setFixedHeight(35)
         default_path = './Data/'
         self.data_path_display.setPlainText(default_path)
         self.data_path_display.setToolTip(self.data_path_display.toPlainText())
 
-        self.styleTable = QtGui.QTableWidget(self)
+        self.styleTable = QtWidgets.QTableWidget(self)
         self.styleTable.setColumnCount(1)
-        self.styleTable.setHorizontalHeaderItem(0, QtGui.QTableWidgetItem(
+        self.styleTable.setHorizontalHeaderItem(0, QtWidgets.QTableWidgetItem(
             "Beer Styles"))
         style_header = self.styleTable.horizontalHeader()
-        style_header.setResizeMode(QtGui.QHeaderView.Stretch)
+        style_header.setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
         self.styleTable.verticalHeader().setVisible(False)
         self.styleTable.setRowCount(1)
         self.styleTable.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.styleTable.connect(self.styleTable, QtCore.SIGNAL
-        ("customContextMenuRequested(QPoint)"), self.styleTable_RClick)
-        self.button_apply = QtGui.QPushButton(self)
+        self.styleTable.customContextMenuRequested.connect\
+            (self.styleTable_RClick)
+        self.button_apply = QtWidgets.QPushButton(self)
         self.button_apply.setText("Apply")
         self.button_apply.clicked.connect(self.apply)
 
         # Layout
-        container = QtGui.QVBoxLayout()
-        container.setMargin(10)
-        box = QtGui.QGridLayout()
+        container = QtWidgets.QVBoxLayout()
+        #container.setMargin(10)
+        box = QtWidgets.QGridLayout()
         self.setLayout(container)
         container.addLayout(box)
         box.addWidget(self.checkbox_theme, 0, 0)
@@ -103,9 +105,9 @@ class Preferences(QtGui.QGroupBox):
 
     def get_data_path(self):
         """" Set path for data/brew save."""
-        dialogue = QtGui.QFileDialog(self)
-        dialogue.setFileMode(QtGui.QFileDialog.AnyFile)
-        # dialogue.setOption(QtGui.QFileDialog.DontUseNativeDialog) win/OSX?
+        dialogue = QtWidgets.QFileDialog(self)
+        dialogue.setFileMode(QtWidgets.QFileDialog.AnyFile)
+        # dialogue.setOption(QtWidgets.QFileDialog.DontUseNativeDialog) win/OSX?
         sel = dialogue.getExistingDirectory()
         self.data_path_display.setPlainText(sel)
         self.data_path_display.setToolTip(self.data_path_display.toPlainText())
@@ -150,16 +152,23 @@ class Preferences(QtGui.QGroupBox):
         self.styleList.sort()
         for item in self.styleList:
             self.styleTable.setRowCount(rows)
-            item = QtGui.QTableWidgetItem(item)
+            item = QtWidgets.QTableWidgetItem(item)
             self.styleTable.setItem(0, pos, item)
             pos += 1
             rows += 1
         self.styleTable.setRowCount(rows)
 
+    def contextMenuEvent(self, event):
+        menu = QtWidgets.QMenu(self)
+        delete = QtWidgets.QAction('Delete', self)
+        menu.addAction(delete)
+        menu.popup(QtGui.QCursor.pos())
+        delete.triggered.connect(self.delete_style)
+
     def styleTable_RClick(self):
         """ R Click menu to delete unwanted entries."""
-        self.menu = QtGui.QMenu(self)
-        delete = QtGui.QAction('Delete', self)
+        self.menu = QtWidgets.QMenu(self)
+        delete = QtWidgets.QAction('Delete', self)
         self.menu.addAction(delete)
         self.menu.popup(QtGui.QCursor.pos())
         delete.triggered.connect(self.delete_style)
@@ -185,7 +194,7 @@ class Preferences(QtGui.QGroupBox):
         self.styleList.sort()
         for item in self.styleList:
             self.styleTable.setRowCount(rows)
-            item = QtGui.QTableWidgetItem(item)
+            item = QtWidgets.QTableWidgetItem(item)
             self.styleTable.setItem(0, pos, item)
             pos += 1
             rows += 1

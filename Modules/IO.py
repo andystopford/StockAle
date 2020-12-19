@@ -1,6 +1,10 @@
-import sys, os.path
-from PyQt4 import QtCore, QtGui
+import os.path
+import sys
 import xml.etree.ElementTree as ET
+from pathlib import Path
+
+from PyQt5.QtCore import QDate
+
 sys.path.append("./Modules")
 from ingredients import*
 from Model import*
@@ -28,7 +32,6 @@ class IO:
             path = self.get_path()
             if path:
                 brew_path = path + 'Brews/'
-                brew_list = []
                 for brewFile in os.listdir(brew_path):
                     if not brewFile.startswith('.'): # filter unix hidden files
                         day = int(brewFile[0:2])
@@ -40,7 +43,7 @@ class IO:
                             model.set_year(year)
                             self.parent.model_dict[year] = model
                         month = self.month_to_num[month]
-                        date = QtCore.QDate(year, month, day)
+                        date = QDate(year, month, day)
                         model = self.parent.model_dict[year]
                         model.add_brew(date)
         except:
@@ -133,6 +136,9 @@ class IO:
         brew_path = self.get_path() + 'Brews/'
         try:
             path = brew_path + self.parent.recipe_filename
+            if not Path(path).is_file():
+                print('File does not exist')
+                return
             tree = ET.parse(path)
             root = tree.getroot()
             for elem in root.iter('Process'):
@@ -145,7 +151,6 @@ class IO:
                 elem.text = rating
             tree.write(path)
         except TypeError:
-            # Event filter(?) causes exceptionj at start-up
             print('No recipe filename set')
 
     def save_brew(self, fname, date):
@@ -212,7 +217,7 @@ class IO:
             self.parent.ui.recipe_box.setTitle(fname)
             tree = ET.ElementTree(root)
             tree.write(fo)
-        curr_date = QtCore.QDate.currentDate()
+        curr_date = QDate.currentDate()
         days = curr_date.daysTo(date)
         if days <= 0:
             self.parent.commit_enable()
@@ -221,13 +226,12 @@ class IO:
         """Loads brew selected from calendar/search into review panel"""
         self.parent.grainRecipe_list = []
         self.parent.hopRecipe_list = []
-        if name is False:
-            fname = unicode(QtGui.QFileDialog.getOpenFileName(self.parent))
-            self.parent.recipe_filename = os.path.basename(fname)
-        else:
-            self.parent.recipe_filename = name
+        self.parent.recipe_filename = name
         path = self.get_path()
         path = path + '/Brews/' + self.parent.recipe_filename
+        if not Path(path).is_file():
+            print('File does not exist')
+            return
         self.parent.ui.date_box.setTitle(self.parent.recipe_filename)
         self.parent.ui.brew_date.setText(self.parent.recipe_filename)
         with open(path, "r"):
@@ -302,4 +306,14 @@ class IO:
                     vol = str(elem.text)
                     self.parent.ui.hcg.vol_disp.setText(vol)
         self.parent.time_ago()
+
+    def delete_brew(self):
+        """Deletion using YearView RClick menu"""
+        path = self.get_path()
+        path = path + 'Brews/' + self.parent.recipe_filename
+        if os.path.exists(path):
+            print('removing ', self.parent.recipe_filename)
+            os.remove(path)
+        else:
+            print('File does not exist')
 

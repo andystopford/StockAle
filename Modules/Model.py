@@ -1,11 +1,14 @@
-from PyQt4 import QtGui, Qt, QtCore
 from itertools import cycle, islice
+
+from PyQt5 import Qt
+from PyQt5.QtCore import QDate
+from PyQt5.QtGui import QStandardItemModel, QStandardItem, QFont
 from Year import Year
 
 
-class Model(QtGui.QStandardItemModel):
+class Model(QStandardItemModel):
     def __init__(self, parent=None):
-        super(Model, self).__init__(parent)
+        super().__init__(parent)
         """Data for one year - generates date numbers to display in YearView,
         and colours them according to weekday/weekend, is a brew day, and 
         searched for"""
@@ -32,29 +35,29 @@ class Model(QtGui.QStandardItemModel):
             for col in range(37):
                 if (col % 7) - 6 == 0 or (col % 7) - 5 == 0:
                     # Weekends
-                    day = QtGui.QStandardItem()
+                    day = QStandardItem()
                     self.setItem(row, col, day)
-                    is_brew = QtGui.QStandardItem()
+                    is_brew = QStandardItem()
                     is_brew.data = False
                     day.setChild(0, 0, is_brew)
-                    is_searched = QtGui.QStandardItem()
+                    is_searched = QStandardItem()
                     is_searched.setData(False)
                     day.setChild(0, 1, is_searched)
-                    search_bground = QtGui.QStandardItem()
+                    search_bground = QStandardItem()
                     search_bground.setData(self.colourSettings.searchday_col)
                     self.item(row, col).setBackground(self.colourSettings.
                                                       weekend_col)
                 else:
                     # Weekdays
-                    day = QtGui.QStandardItem()
+                    day = QStandardItem()
                     self.setItem(row, col, day)
-                    is_brew = QtGui.QStandardItem()
+                    is_brew = QStandardItem()
                     is_brew.data = False
                     day.setChild(0, 0, is_brew)
-                    is_searched = QtGui.QStandardItem()
+                    is_searched = QStandardItem()
                     is_searched.setData(False)
                     day.setChild(0, 1, is_searched)
-                    search_bground = QtGui.QStandardItem()
+                    search_bground = QStandardItem()
                     search_bground.setData(self.colourSettings.searchday_col)
                     self.item(row, col).setBackground(self.colourSettings.
                                                       weekday_col)
@@ -88,8 +91,7 @@ class Model(QtGui.QStandardItemModel):
                         if today[0] == curr_date and today[1] == curr_month:
                             # Highlight today
                             colour = Qt.QColor('red')
-                            item.setFont(QtGui.QFont('Sans Serif', 15, QtGui.
-                                                     QFont.Bold))
+                            item.setFont(QFont('Sans Serif', 15, QFont.Bold))
                         else:
                             colour = Qt.QColor('black')
                     item.setForeground(colour)
@@ -98,8 +100,8 @@ class Model(QtGui.QStandardItemModel):
                     # Make the QDate a child of the day
                     if date is not '':
                         date = int(date)
-                        now = QtCore.QDate(year, curr_month + 1, date)
-                        date = QtGui.QStandardItem()
+                        now = QDate(year, curr_month + 1, date)
+                        date = QStandardItem()
                         item.setChild(0, 1, date)
                         date.setData(now)
 
